@@ -1,0 +1,245 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="源文件">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="头文件">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="资源文件">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="源文件\plate_location_src">
+      <UniqueIdentifier>{ba6fee0f-8b06-45f0-a464-3f412e41f17b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="源文件\plate_recognition_src">
+      <UniqueIdentifier>{77134689-fa92-44ae-a703-91eb00a6a08d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="源文件\plate_tracking_src">
+      <UniqueIdentifier>{ae720eda-d101-4e9f-9e4d-00a7207b31e3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="源文件\common">
+      <UniqueIdentifier>{39215ef8-cdf7-4b61-be69-9c3e677b433b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="源文件\draw_debug_src">
+      <UniqueIdentifier>{cbc1c7c8-ac76-4963-8107-4bd5030bce45}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="源文件\hog_detect_src">
+      <UniqueIdentifier>{cb77e5ce-4848-47fb-9c58-8a5cbcb367b4}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="debug_show_image.h">
+      <Filter>源文件</Filter>
+    </ClInclude>
+    <ClInclude Include="dma_interface.h">
+      <Filter>源文件</Filter>
+    </ClInclude>
+    <ClInclude Include="lc_plate_params.h">
+      <Filter>源文件</Filter>
+    </ClInclude>
+    <ClInclude Include="libjpeg_turbo_interface.h">
+      <Filter>源文件</Filter>
+    </ClInclude>
+    <ClInclude Include="location_interface.h">
+      <Filter>源文件</Filter>
+    </ClInclude>
+    <ClInclude Include="malloc_aligned.h">
+      <Filter>源文件</Filter>
+    </ClInclude>
+    <ClInclude Include="recognition_interface.h">
+      <Filter>源文件</Filter>
+    </ClInclude>
+    <ClInclude Include="time_test.h">
+      <Filter>源文件</Filter>
+    </ClInclude>
+    <ClInclude Include="yuv_osd_string.h">
+      <Filter>源文件</Filter>
+    </ClInclude>
+    <ClInclude Include="lc_plate_analysis.h">
+      <Filter>源文件</Filter>
+    </ClInclude>
+    <ClInclude Include="plate_location_src\plate_double_decide.h">
+      <Filter>源文件\plate_location_src</Filter>
+    </ClInclude>
+    <ClInclude Include="plate_location_src\plate_location.h">
+      <Filter>源文件\plate_location_src</Filter>
+    </ClInclude>
+    <ClInclude Include="plate_location_src\plate_mask.h">
+      <Filter>源文件\plate_location_src</Filter>
+    </ClInclude>
+    <ClInclude Include="plate_location_src\plate_runs.h">
+      <Filter>源文件\plate_location_src</Filter>
+    </ClInclude>
+    <ClInclude Include="plate_recognition_src\car_body_color.h">
+      <Filter>源文件\plate_recognition_src</Filter>
+    </ClInclude>
+    <ClInclude Include="plate_recognition_src\car_window.h">
+      <Filter>源文件\plate_recognition_src</Filter>
+    </ClInclude>
+    <ClInclude Include="plate_recognition_src\feature.h">
+      <Filter>源文件\plate_recognition_src</Filter>
+    </ClInclude>
+    <ClInclude Include="plate_recognition_src\IQmath.h">
+      <Filter>源文件\plate_recognition_src</Filter>
+    </ClInclude>
+    <ClInclude Include="plate_recognition_src\IQmath_inline.h">
+      <Filter>源文件\plate_recognition_src</Filter>
+    </ClInclude>
+    <ClInclude Include="plate_recognition_src\lsvm.h">
+      <Filter>源文件\plate_recognition_src</Filter>
+    </ClInclude>
+    <ClInclude Include="plate_recognition_src\lsvm_model.h">
+      <Filter>源文件\plate_recognition_src</Filter>
+    </ClInclude>
+    <ClInclude Include="plate_recognition_src\lsvm_param_ambiguous0.h">
+      <Filter>源文件\plate_recognition_src</Filter>
+    </ClInclude>
+    <ClInclude Include="plate_recognition_src\lsvm_param_ambiguous1.h">
+      <Filter>源文件\plate_recognition_src</Filter>
+    </ClInclude>
+    <ClInclude Include="plate_recognition_src\lsvm_param_chinese.h">
+      <Filter>源文件\plate_recognition_src</Filter>
+    </ClInclude>
+    <ClInclude Include="plate_recognition_src\lsvm_param_english.h">
+      <Filter>源文件\plate_recognition_src</Filter>
+    </ClInclude>
+    <ClInclude Include="plate_recognition_src\lsvm_param_jun_wjs.h">
+      <Filter>源文件\plate_recognition_src</Filter>
+    </ClInclude>
+    <ClInclude Include="plate_recognition_src\lsvm_param_numbers.h">
+      <Filter>源文件\plate_recognition_src</Filter>
+    </ClInclude>
+    <ClInclude Include="plate_recognition_src\lsvm_param_xuejing.h">
+      <Filter>源文件\plate_recognition_src</Filter>
+    </ClInclude>
+    <ClInclude Include="plate_recognition_src\plate_color.h">
+      <Filter>源文件\plate_recognition_src</Filter>
+    </ClInclude>
+    <ClInclude Include="plate_recognition_src\plate_deskewing.h">
+      <Filter>源文件\plate_recognition_src</Filter>
+    </ClInclude>
+    <ClInclude Include="plate_recognition_src\plate_recognition.h">
+      <Filter>源文件\plate_recognition_src</Filter>
+    </ClInclude>
+    <ClInclude Include="plate_recognition_src\plate_segmentation.h">
+      <Filter>源文件\plate_recognition_src</Filter>
+    </ClInclude>
+    <ClInclude Include="plate_recognition_src\plate_segmentation_double.h">
+      <Filter>源文件\plate_recognition_src</Filter>
+    </ClInclude>
+    <ClInclude Include="plate_recognition_src\sigmoid.h">
+      <Filter>源文件\plate_recognition_src</Filter>
+    </ClInclude>
+    <ClInclude Include="plate_recognition_src\typedef.h">
+      <Filter>源文件\plate_recognition_src</Filter>
+    </ClInclude>
+    <ClInclude Include="plate_tracking_src\plate_tracking.h">
+      <Filter>源文件\plate_tracking_src</Filter>
+    </ClInclude>
+    <ClInclude Include="common\image.h">
+      <Filter>源文件\common</Filter>
+    </ClInclude>
+    <ClInclude Include="common\label.h">
+      <Filter>源文件\common</Filter>
+    </ClInclude>
+    <ClInclude Include="common\threshold.h">
+      <Filter>源文件\common</Filter>
+    </ClInclude>
+    <ClInclude Include="draw_debug_src\draw.h">
+      <Filter>源文件\draw_debug_src</Filter>
+    </ClInclude>
+    <ClInclude Include="hog_detect_src\hog_detect_plate.h">
+      <Filter>源文件\hog_detect_src</Filter>
+    </ClInclude>
+    <ClInclude Include="hog_detect_src\hog_standardc.h">
+      <Filter>源文件\hog_detect_src</Filter>
+    </ClInclude>
+    <ClInclude Include="hog_detect_src\integral_hist_list.h">
+      <Filter>源文件\hog_detect_src</Filter>
+    </ClInclude>
+    <ClInclude Include="hog_detect_src\plate_64x32_standardc.h">
+      <Filter>源文件\hog_detect_src</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="lc_plate_analysis.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="lc_plate_params.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="plate_location_src\plate_double_decide.c">
+      <Filter>源文件\plate_location_src</Filter>
+    </ClCompile>
+    <ClCompile Include="plate_location_src\plate_location.c">
+      <Filter>源文件\plate_location_src</Filter>
+    </ClCompile>
+    <ClCompile Include="plate_location_src\plate_mask.c">
+      <Filter>源文件\plate_location_src</Filter>
+    </ClCompile>
+    <ClCompile Include="plate_location_src\plate_runs.c">
+      <Filter>源文件\plate_location_src</Filter>
+    </ClCompile>
+    <ClCompile Include="plate_recognition_src\car_body_color.c">
+      <Filter>源文件\plate_recognition_src</Filter>
+    </ClCompile>
+    <ClCompile Include="plate_recognition_src\car_window.c">
+      <Filter>源文件\plate_recognition_src</Filter>
+    </ClCompile>
+    <ClCompile Include="plate_recognition_src\feature.c">
+      <Filter>源文件\plate_recognition_src</Filter>
+    </ClCompile>
+    <ClCompile Include="plate_recognition_src\lsvm.c">
+      <Filter>源文件\plate_recognition_src</Filter>
+    </ClCompile>
+    <ClCompile Include="plate_recognition_src\lsvm_model.c">
+      <Filter>源文件\plate_recognition_src</Filter>
+    </ClCompile>
+    <ClCompile Include="plate_recognition_src\plate_color.c">
+      <Filter>源文件\plate_recognition_src</Filter>
+    </ClCompile>
+    <ClCompile Include="plate_recognition_src\plate_recognition.c">
+      <Filter>源文件\plate_recognition_src</Filter>
+    </ClCompile>
+    <ClCompile Include="plate_recognition_src\plate_segmentation.c">
+      <Filter>源文件\plate_recognition_src</Filter>
+    </ClCompile>
+    <ClCompile Include="plate_recognition_src\plate_segmentation_double.c">
+      <Filter>源文件\plate_recognition_src</Filter>
+    </ClCompile>
+    <ClCompile Include="plate_tracking_src\plate_tracking.c">
+      <Filter>源文件\plate_tracking_src</Filter>
+    </ClCompile>
+    <ClCompile Include="common\image.c">
+      <Filter>源文件\common</Filter>
+    </ClCompile>
+    <ClCompile Include="common\label.c">
+      <Filter>源文件\common</Filter>
+    </ClCompile>
+    <ClCompile Include="common\threshold.c">
+      <Filter>源文件\common</Filter>
+    </ClCompile>
+    <ClCompile Include="draw_debug_src\draw.c">
+      <Filter>源文件\draw_debug_src</Filter>
+    </ClCompile>
+    <ClCompile Include="hog_detect_src\hog_detect_plate.c">
+      <Filter>源文件\hog_detect_src</Filter>
+    </ClCompile>
+    <ClCompile Include="hog_detect_src\hog_standardc.c">
+      <Filter>源文件\hog_detect_src</Filter>
+    </ClCompile>
+    <ClCompile Include="plate_recognition_src\plate_deskewing.cpp">
+      <Filter>源文件\plate_recognition_src</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="common\touch.asm">
+      <Filter>源文件\common</Filter>
+    </None>
+  </ItemGroup>
+</Project>
