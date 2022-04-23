@@ -20,4 +20,4 @@ do
     fi
 done
 
-#reboot
+reboot
