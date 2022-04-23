@@ -116,7 +116,7 @@ int main(int argc, char **argv)
 
     fixup_server_root();
     read_config_files();
-    open_logs();
+    //open_logs();
     server_s = create_server_socket();
     init_signals();
     drop_privs();
