@@ -1,0 +1,35 @@
+#! /bin/sh
+
+/bin/mount -a
+
+for initscript in /etc/init.d/S[0-9][0-9]*
+do
+	if [ -x $initscript ] ;
+	then
+		echo "[RCS]: $initscript"
+		$initscript
+	fi
+done
+
+ifconfig eth0 `cat /alg/ip_cfg.txt` netmask `cat /alg/netmask_cfg.txt`
+route add default gw `cat /alg/gateway_cfg.txt`
+
+ifconfig lo 127.0.0.1
+
+mount tmpfs /tmp -t tmpfs
+telnetd
+
+/alg/boa
+
+cd /ko
+./loadgk7205v200 -i -sensor gc2053 -osmem 46M -board demo -yuv0 0
+
+devmem 0x112C0070 32 0x00001002
+devmem 0x112C0074 32 0x00001002
+
+chmod +x /alg/run.sh
+/alg/run.sh &
+
+chmod +x /alg/run_search.sh
+/alg/run_search.sh &
+

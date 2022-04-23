@@ -3569,12 +3569,12 @@ HI_S32 SAMPLE_VENC_MJPEG_JPEG(void)
     /******************************************
      stream save process
     ******************************************/
-    s32Ret = SAMPLE_COMM_VENC_StartGetStream(VencChn,1);
-    if (HI_SUCCESS != s32Ret)
-    {
-        SAMPLE_PRT("Start Venc failed!\n");
-        goto EXIT_VENC_JPEGE_UnBind;
-    }
+    // s32Ret = SAMPLE_COMM_VENC_StartGetStream(VencChn,1);
+    // if (HI_SUCCESS != s32Ret)
+    // {
+    //     SAMPLE_PRT("Start Venc failed!\n");
+    //     goto EXIT_VENC_JPEGE_UnBind;
+    // }
 
     /******************************************
      stream venc process -- get jpeg stream, then save it to file.
@@ -3677,7 +3677,7 @@ HI_S32 SAMPLE_VENC_MJPEG_JPEG(void)
     HI_MPI_VB_ReleaseBlock(plateBlk);
     HI_MPI_VB_DestroyPool(u32PoolId);
 
-EXIT_VENC_JPEGE_UnBind:
+//EXIT_VENC_JPEGE_UnBind:
     SAMPLE_COMM_VPSS_UnBind_VENC(VpssGrp,VpssChn[0],VencChn[1]);
 //EXIT_VENC_JPEGE_STOP:
     SAMPLE_COMM_VENC_Stop(VencChn[1]);

@@ -29,6 +29,11 @@ cp ./sample/venc/vehicle0415.bin $packageAlgDir
 cp ./sample/venc/vehicle0415.param $packageAlgDir
 cp ./update.sh $packageAlgDir
 
+arm-gcc6.3-linux-uclibceabi-strip $packageAlgDir/boa
+arm-gcc6.3-linux-uclibceabi-strip $packageAlgDir/sample_venc
+arm-gcc6.3-linux-uclibceabi-strip $packageAlgDir/search
+arm-gcc6.3-linux-uclibceabi-strip $packageAlgDir/ctrlCgi
+
 zip -q -r upgrade_$1.zip ./upgrade
 
 rm -rf ./out/upgrade

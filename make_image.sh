@@ -67,6 +67,12 @@ cp ./search/search $packageAlgDir
 cp ./sample/venc/vehicle0415.bin $packageAlgDir
 cp ./sample/venc/vehicle0415.param $packageAlgDir
 cp ./sample/mime.types ./rootfs_package/etc
+cp ./sample/rcS ./rootfs_package/etc/init.d
+
+arm-gcc6.3-linux-uclibceabi-strip $packageAlgDir/boa
+arm-gcc6.3-linux-uclibceabi-strip $packageAlgDir/sample_venc
+arm-gcc6.3-linux-uclibceabi-strip $packageAlgDir/ctrcgi
+arm-gcc6.3-linux-uclibceabi-strip $packageAlgDir/search
 
 current=`date "+%Y%m%d%H%M%S"`
 
