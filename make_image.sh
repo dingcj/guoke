@@ -66,6 +66,7 @@ cp ./sample/venc/sample_venc $packageAlgDir
 cp ./search/search $packageAlgDir
 cp ./sample/venc/vehicle0415.bin $packageAlgDir
 cp ./sample/venc/vehicle0415.param $packageAlgDir
+cp ./sample/mime.types ./rootfs_package/etc
 
 current=`date "+%Y%m%d%H%M%S"`
 
