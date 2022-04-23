@@ -127,6 +127,9 @@ int algoParkingGuidance::algoProcess(unsigned char* pbNV21, int nImgW, int nImgH
         Plate_handle plate_handle = NULL;
         int proce_type = LC_PLATE_PROC_WAIT_PIC;
         lc_plate_analysis_create(&plate_handle, proce_type, nPlaceWidth, nPlaceHeight, NULL, &plate_handle);
+        if (plate_handle == NULL) {
+            continue;
+        }
         lc_plate_set_chinese_default(plate_handle, stConfig.pDefaultProvince);
         lc_plate_set_chinese_trust_thresh(plate_handle, 70);
         lc_plate_set_deskew_flag(plate_handle, 1);
@@ -145,7 +148,8 @@ int algoParkingGuidance::algoProcess(unsigned char* pbNV21, int nImgW, int nImgH
             pInfo.rtPlatePos.y0 = plate_pos.y0 + rtPlace.y0;
             pInfo.rtPlatePos.y1 = plate_pos.y1 + rtPlace.y0;
 
-            int8_t* plate_name = NULL;
+            int8_t* plate_name = NULL;
+
 			uint8_t plateType = 0u;
 			uint8_t plateReliability = 0u;
 			lc_plate_get_plate_color_id(plate_handle, num, &plateType);
