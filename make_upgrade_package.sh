@@ -32,7 +32,7 @@ cp ./update.sh $packageAlgDir
 arm-gcc6.3-linux-uclibceabi-strip $packageAlgDir/boa
 arm-gcc6.3-linux-uclibceabi-strip $packageAlgDir/sample_venc
 arm-gcc6.3-linux-uclibceabi-strip $packageAlgDir/search
-arm-gcc6.3-linux-uclibceabi-strip $packageAlgDir/ctrlCgi
+arm-gcc6.3-linux-uclibceabi-strip $packageAlgDir/ctrcgi
 
 zip -q -r upgrade_$1.zip ./upgrade
 
