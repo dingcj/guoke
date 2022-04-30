@@ -1,0 +1,11 @@
+*.o
+*.a
+*.jpg
+*.h264
+*.yuv
+*.avi
+*.zip
+sample_venc
+ctrlCgi/ctrcgi
+search/search
+out

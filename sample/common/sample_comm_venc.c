@@ -36,6 +36,7 @@ HI_CHAR* DstBuf = NULL;
 #define TEMP_BUF_LEN 8
 #define MAX_THM_SIZE (64*1024)
 
+extern HI_S32 HisiPutH264DataToBuffer(VENC_STREAM_S *pstStream);
 
 #ifdef __READ_ALL_FILE__
 static HI_S32 FileTrans_GetThmFromJpg(HI_CHAR* JPGPath, HI_U32* DstSize)
@@ -1947,21 +1948,16 @@ HI_VOID* SAMPLE_COMM_VENC_GetVencStreamProc(HI_VOID* p)
 {
     HI_S32 i;
     HI_S32 s32ChnTotal;
-    VENC_CHN_ATTR_S stVencChnAttr;
     SAMPLE_VENC_GETSTREAM_PARA_S* pstPara;
     HI_S32 maxfd = 0;
     struct timeval TimeoutVal;
     fd_set read_fds;
     HI_U32 u32PictureCnt[VENC_MAX_CHN_NUM]={0};
     HI_S32 VencFd[VENC_MAX_CHN_NUM];
-    HI_CHAR aszFileName[VENC_MAX_CHN_NUM][64];
-    FILE* pFile[VENC_MAX_CHN_NUM];
-    char szFilePostfix[10];
     VENC_CHN_STATUS_S stStat;
     VENC_STREAM_S stStream;
     HI_S32 s32Ret;
     VENC_CHN VencChn;
-    PAYLOAD_TYPE_E enPayLoadType[VENC_MAX_CHN_NUM];
     VENC_STREAM_BUF_INFO_S stStreamBufInfo[VENC_MAX_CHN_NUM];
 
     prctl(PR_SET_NAME, "GetVencStream", 0,0,0);
@@ -1980,34 +1976,6 @@ HI_VOID* SAMPLE_COMM_VENC_GetVencStreamProc(HI_VOID* p)
     {
         /* decide the stream file name, and open file to save stream */
         VencChn = pstPara->VeChn[i];
-        s32Ret = HI_MPI_VENC_GetChnAttr(VencChn, &stVencChnAttr);
-        if (s32Ret != HI_SUCCESS)
-        {
-            SAMPLE_PRT("HI_MPI_VENC_GetChnAttr chn[%d] failed with %#x!\n", \
-                       VencChn, s32Ret);
-            return NULL;
-        }
-        enPayLoadType[i] = stVencChnAttr.stVencAttr.enType;
-
-        s32Ret = SAMPLE_COMM_VENC_GetFilePostfix(enPayLoadType[i], szFilePostfix);
-        if (s32Ret != HI_SUCCESS)
-        {
-            SAMPLE_PRT("SAMPLE_COMM_VENC_GetFilePostfix [%d] failed with %#x!\n", \
-                       stVencChnAttr.stVencAttr.enType, s32Ret);
-            return NULL;
-        }
-        if(PT_JPEG != enPayLoadType[i])
-        {
-            snprintf(aszFileName[i],32, "stream_chn%d%s", i, szFilePostfix);
-
-            pFile[i] = fopen(aszFileName[i], "wb");
-            if (!pFile[i])
-            {
-                SAMPLE_PRT("open file[%s] failed!\n",
-                           aszFileName[i]);
-                return NULL;
-            }
-        }
         /* Set Venc Fd. */
         VencFd[i] = HI_MPI_VENC_GetFd(VencChn);
         if (VencFd[i] < 0)
@@ -2111,25 +2079,9 @@ HI_VOID* SAMPLE_COMM_VENC_GetVencStreamProc(HI_VOID* p)
                     }
 
                     /*******************************************************
-                     step 2.5 : save frame to file
+                     step 2.5 : save frame to fifo
                     *******************************************************/
-                    if(PT_JPEG == enPayLoadType[i])
-                    {
-                        strcpy(szFilePostfix, ".jpg");
-                        snprintf(aszFileName[i],32, "stream_chn%d_%d%s", VencChn, u32PictureCnt[i],szFilePostfix);
-                        pFile[i] = fopen(aszFileName[i], "wb");
-                        if (!pFile[i])
-                        {
-                            SAMPLE_PRT("open file err!\n");
-                            return NULL;
-                        }
-                    }
-
-#ifndef __HuaweiLite__
-                    s32Ret = SAMPLE_COMM_VENC_SaveStream(pFile[i], &stStream);
-#else
-                    s32Ret = SAMPLE_COMM_VENC_SaveStream_PhyAddr(pFile[i], &stStreamBufInfo[i], &stStream);
-#endif
+                    HisiPutH264DataToBuffer(&stStream);
                     if (HI_SUCCESS != s32Ret)
                     {
                         free(stStream.pstPack);
@@ -2155,22 +2107,8 @@ HI_VOID* SAMPLE_COMM_VENC_GetVencStreamProc(HI_VOID* p)
                     free(stStream.pstPack);
                     stStream.pstPack = NULL;
                     u32PictureCnt[i]++;
-                    if(PT_JPEG == enPayLoadType[i])
-                    {
-                        fclose(pFile[i]);
-                    }
                 }
             }
-        }
-    }
-    /*******************************************************
-    * step 3 : close save-file
-    *******************************************************/
-    for (i = 0; i < s32ChnTotal; i++)
-    {
-        if(PT_JPEG != enPayLoadType[i])
-        {
-            fclose(pFile[i]);
         }
     }
     return NULL;
