@@ -22,7 +22,7 @@ telnetd
 /alg/boa
 
 cd /ko
-./loadgk7205v200 -i -sensor gc2053 -osmem 46M -board demo -yuv0 0
+./loadgk7205v200 -i -sensor gc2053 -osmem 44M -board demo -yuv0 0
 
 devmem 0x112C0070 32 0x00001002
 devmem 0x112C0074 32 0x00001002
