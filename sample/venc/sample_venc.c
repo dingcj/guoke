@@ -1966,6 +1966,10 @@ HI_S32 CallPlateCarDetectAlg(VIDEO_FRAME_INFO_S *frame, PARKING_GUIDANCE_OUT_INF
     const  int callAlgInterval = 5;
     time_t now = CurrentTimestamp();
     uint32_t callAlgTimeOut = CheckIsTimeout(now, prevCallAlgTime, callAlgInterval);
+    uint32_t equipment = HI_FALSE;
+    #ifdef EQUIPMENT_MODE
+    equipment = HI_TRUE;
+    #endif 
 
     HI_S32 ret = 0;
     
@@ -1993,7 +1997,7 @@ HI_S32 CallPlateCarDetectAlg(VIDEO_FRAME_INFO_S *frame, PARKING_GUIDANCE_OUT_INF
 
     if (g_TestAlg) { clock_gettime(CLOCK_MONOTONIC, &beforeAlg); }
     ParkingGuidanceIOProcess(pUserVirtAddr, frame->stVFrame.u32Width, frame->stVFrame.u32Height);
-    if (callAlgTimeOut) {
+    if (callAlgTimeOut && (!equipment)) {
         ParkingGuidanceIOGetInfo(pstOutInfo);
         prevCallAlgTime = now;
         ret = 0;
