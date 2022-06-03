@@ -21,3 +21,8 @@ common:
 
 common_clean:
 	$(AT)make -C common clean
+
+eqm: audio venc_eqm
+
+venc_eqm: common
+	cd venc;$(AT)make -f Makefile_eqm;cd ..

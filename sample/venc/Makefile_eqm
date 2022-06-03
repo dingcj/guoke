@@ -3,6 +3,6 @@ include $(PORTING_ROOT_DIR)/porting_base.mk
 
 TARGET := sample_venc
 
-CFLAGS := $(PORTING_CFLAGS) $(PORTING_LIBS)
+CFLAGS := $(PORTING_CFLAGS) $(PORTING_LIBS) -D EQUIPMENT_MODE
 
 include $(CURDIR)/rule.mk

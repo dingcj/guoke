@@ -1969,6 +1969,7 @@ HI_S32 CallPlateCarDetectAlg(VIDEO_FRAME_INFO_S *frame, PARKING_GUIDANCE_OUT_INF
     uint32_t equipment = HI_FALSE;
     #ifdef EQUIPMENT_MODE
     equipment = HI_TRUE;
+    SAMPLE_PRT("CallPlateCarDetectAlg Run on EQUIPMENT_MODE\n");
     #endif 
 
     HI_S32 ret = 0;
