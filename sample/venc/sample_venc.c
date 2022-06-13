@@ -1650,6 +1650,7 @@ HI_S32 PlateReplaceFrameFromFile(FILE *fp, VIDEO_FRAME_INFO_S *frame)
         return -1;
     }
 
+    (void) fseek(fp, 0L, SEEK_SET);
     SAMPLE_PRT("u32Stride[0]: %u, u32Stride[1]: %u, width: %u, height: %u\n", frame->stVFrame.u32Stride[0],
         frame->stVFrame.u32Stride[1], frame->stVFrame.u32Width, frame->stVFrame.u32Height);
     dataSize = (frame->stVFrame.u32Stride[0]) * (frame->stVFrame.u32Height) * 3 / 2;
@@ -1669,7 +1670,8 @@ HI_S32 PlateReplaceFrameFromFile(FILE *fp, VIDEO_FRAME_INFO_S *frame)
         ret = fread(start, 1, frame->stVFrame.u32Width, fp);
         if (ret != frame->stVFrame.u32Width)
         {
-            SAMPLE_PRT("PlateReplaceFrameFromFile fread1 failed.");
+            perror("fread error");
+            SAMPLE_PRT("PlateReplaceFrameFromFile fread1 failed, ret: %u\n.", ret);
             (void) fseek(fp, 0L, SEEK_SET);
             HI_MPI_SYS_Munmap(pUserVirtAddr, dataSize);
             return -1;
