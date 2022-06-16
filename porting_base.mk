@@ -1,4 +1,4 @@
-SDK_DIR := $(shell cd $(PORTING_ROOT_DIR)/../../GKIPCLinuxV100R001C00SPC030 && /bin/pwd)
+SDK_DIR := $(shell cd $(PORTING_ROOT_DIR)/GKIPCLinuxV100R001C00SPC030 && /bin/pwd)
 
 include $(SDK_DIR)/build/base.mk
 
