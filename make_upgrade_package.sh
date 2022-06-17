@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 if [ $# != 2 ] ; then
     echo "Make upgrade packe script param err!"
@@ -10,6 +10,10 @@ mkdir upgrade
 
 sed -i "s/^const char \*g_SoftWareVersion =.*$/const char \*g_SoftWareVersion = \"$1\";/g" HttpInterface/shareHeader.h
 sed -i "s/^const char \*g_HardWareVersion =.*$/const char \*g_HardWareVersion = \"$2\";/g" HttpInterface/shareHeader.h
+
+cd GKIPCLinuxV100R001C00SPC030
+source build/env.sh
+cd ..
 
 cd sample/venc/
 make clean
