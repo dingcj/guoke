@@ -15,11 +15,11 @@ cd GKIPCLinuxV100R001C00SPC030
 source build/env.sh
 cd ..
 
-cd sample/venc/
+cd sample/
 make clean
 make
 
-cd ../..
+cd ../
 
 packageAlgDir=./upgrade
 
