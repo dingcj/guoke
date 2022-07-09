@@ -15,6 +15,10 @@ extern "C" {
 #include <time.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <sys/ioctl.h>
 
 #include "sample_comm.h"
 #include "ParkingGuiddanceIO.h"
@@ -26,6 +30,7 @@ extern "C" {
 #include "tcpServer.h"
 #include "base64.h"
 #include "shareHeader.h"
+#include "watchdog.h"
 
 #define BIG_STREAM_SIZE     PIC_2688x1944
 #define SMALL_STREAM_SIZE   PIC_VGA
@@ -199,10 +204,26 @@ static char curPlateInfo[MAX_PLACE_NUM][10] = {0};
 
 int     g_TestAlg = HI_FALSE;
 
+#define WDT_DEV_FILE "/dev/watchdog"
+
 typedef struct PostInfoItem {
     char *postUrl;
     char *postData;
 } PostInfoItem;
+
+void feed_wdt()
+{
+    int fd = open(WDT_DEV_FILE, O_RDWR);
+    if (fd < 0) {
+        perror("feed_wdt open");
+        return;
+    }
+    int ret = ioctl(fd, WDIOC_KEEPALIVE);
+    if (ret != 0) {
+        perror("ioctl err");
+    }
+    close(fd);
+}
 
 int WriteStringToFile(const char *str, const char *file)
 {
@@ -3623,6 +3644,7 @@ HI_S32 SAMPLE_VENC_MJPEG_JPEG(void)
             sleep(2);
             execl("/bin/sh", "sh", "-c", "/sbin/reboot", (char *) 0);
         }
+        feed_wdt();
 
         if (GetCurrentUpgState() == UPG_SUCCESS) {
             exit(123);
