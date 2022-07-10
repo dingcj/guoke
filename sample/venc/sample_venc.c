@@ -656,7 +656,7 @@ int DumpConfigToJson(const ParkingGuidanceParamStru *cfg)
 {
     int ret = 0;
     cJSON *rootObj = NULL;
-    EXEC_NE((rootObj = cJSON_CreateObject()), NULL, -1);
+    EXEC_NE((rootObj = cJSON_CreateObject()), NULL, __LINE__);
 
     cJSON_AddStringToObject(rootObj, "postJpegUrl", cfg->postJpegUrl);
     cJSON_AddNumberToObject(rootObj, "postJpegInterval", cfg->postJpegInterval);
@@ -672,25 +672,25 @@ int DumpConfigToJson(const ParkingGuidanceParamStru *cfg)
     cJSON_AddStringToObject(rootObj, "LightSlaveIP", cfg->LightSlaveIP);
     cJSON_AddStringToObject(rootObj, "LightSlaveMac", cfg->LightSlaveMac);
 
-    //JUGE(cfg->postUrl != NULL, -1);
+    //JUGE(cfg->postUrl != NULL, __LINE__);
     //cJSON_AddStringToObject(rootObj, "postUrl", cfg->postUrl);
 
     cJSON *parkCfgObj = NULL;
-    EXEC_NE((parkCfgObj = cJSON_CreateObject()), NULL, -1);
+    EXEC_NE((parkCfgObj = cJSON_CreateObject()), NULL, __LINE__);
     cJSON_AddItemToObject(rootObj, "PARKING_GUIDANCE_CONFIG", parkCfgObj);
 
     cJSON_AddNumberToObject(parkCfgObj, "nPlaceNum", cfg->algParam.nPlaceNum);
     
-    //JUGE(strlen(cfg->algParam.pDefaultProvince) != 0, -1);
+    //JUGE(strlen(cfg->algParam.pDefaultProvince) != 0, __LINE__);
     cJSON_AddStringToObject(parkCfgObj, "pDefaultProvince", cfg->algParam.pDefaultProvince);
     
     cJSON *pointArr = NULL;
-    EXEC_NE((pointArr = cJSON_CreateArray()), NULL, -1);
+    EXEC_NE((pointArr = cJSON_CreateArray()), NULL, __LINE__);
     cJSON_AddItemToObject(parkCfgObj, "stPlaceCoord", pointArr);
     
     for (int i = 0; i < cfg->algParam.nPlaceNum; i++) {
         cJSON *point = NULL;
-        EXEC_NE((point = cJSON_CreateObject()), NULL, -1);
+        EXEC_NE((point = cJSON_CreateObject()), NULL, __LINE__);
         cJSON_AddItemToArray(pointArr, point);
         cJSON_AddStringToObject(point, "carnum", cfg->placeCfgList[i].id);
         cJSON_AddNumberToObject(point, "carnumEnable", cfg->placeCfgList[i].enable);
@@ -2363,7 +2363,7 @@ int ProcessGetRegularlyParamReq(struct ServerProtoHeader *req)
     char *rspdata = NULL;
     struct ServerResponseHdr rsp = {0};
     
-    EXEC_NE((rootObj = cJSON_CreateObject()), NULL, -1);
+    EXEC_NE((rootObj = cJSON_CreateObject()), NULL, __LINE__);
     
     cJSON_AddNumberToObject(rootObj, "com", 11);
     
@@ -2549,7 +2549,7 @@ int ProcessUpgradeGetState(struct ServerProtoHeader *req)
     cJSON *rootObj = NULL;
     int err = 0;
     char *responseJson = NULL;
-    EXEC_NE((rootObj = cJSON_CreateObject()), NULL, -1);
+    EXEC_NE((rootObj = cJSON_CreateObject()), NULL, __LINE__);
 
     UPGRADE_STATE currSate = UPG_NOT_START;
     int progress = 0;
@@ -2624,33 +2624,33 @@ int ProcSetPlaceStatus(struct ServerProtoHeader *req)
     rootObj = cJSON_Parse(algParamReq->jsonData);
     JUGE(rootObj != NULL, ERROR);
 
-    EXEC_EQ(GetStringValFromJson(rootObj, "postion", tmpbuf, sizeof(tmpbuf)), 0, -1);
+    EXEC_EQ(GetStringValFromJson(rootObj, "postion", tmpbuf, sizeof(tmpbuf)), 0, __LINE__);
     strncpy(g_Allconfig.postion, tmpbuf, sizeof(g_Allconfig.postion));
 
-    EXEC_EQ(GetStringValFromJson(rootObj, "carnum1", tmpbuf, sizeof(tmpbuf)), 0, -1);
+    EXEC_EQ(GetStringValFromJson(rootObj, "carnum1", tmpbuf, sizeof(tmpbuf)), 0, __LINE__);
     strncpy(g_Allconfig.placeCfgList[0].id, tmpbuf, sizeof(g_Allconfig.placeCfgList[0].id));
 
-    EXEC_EQ(GetStringValFromJson(rootObj, "carnum2", tmpbuf, sizeof(tmpbuf)), 0, -1);
+    EXEC_EQ(GetStringValFromJson(rootObj, "carnum2", tmpbuf, sizeof(tmpbuf)), 0, __LINE__);
     strncpy(g_Allconfig.placeCfgList[1].id, tmpbuf, sizeof(g_Allconfig.placeCfgList[1].id));
 
-    EXEC_EQ(GetStringValFromJson(rootObj, "carnum3", tmpbuf, sizeof(tmpbuf)), 0, -1);
+    EXEC_EQ(GetStringValFromJson(rootObj, "carnum3", tmpbuf, sizeof(tmpbuf)), 0, __LINE__);
     strncpy(g_Allconfig.placeCfgList[2].id, tmpbuf, sizeof(g_Allconfig.placeCfgList[2].id));
 
-    EXEC_EQ(GetIntValFromJson(rootObj, "carnumEnable1", &(g_Allconfig.placeCfgList[0].enable)), 0, -1);
-    EXEC_EQ(GetIntValFromJson(rootObj, "carnumEnable2", &(g_Allconfig.placeCfgList[1].enable)), 0, -1);
-    EXEC_EQ(GetIntValFromJson(rootObj, "carnumEnable3", &(g_Allconfig.placeCfgList[2].enable)), 0, -1);
+    EXEC_EQ(GetIntValFromJson(rootObj, "carnumEnable1", &(g_Allconfig.placeCfgList[0].enable)), 0, __LINE__);
+    EXEC_EQ(GetIntValFromJson(rootObj, "carnumEnable2", &(g_Allconfig.placeCfgList[1].enable)), 0, __LINE__);
+    EXEC_EQ(GetIntValFromJson(rootObj, "carnumEnable3", &(g_Allconfig.placeCfgList[2].enable)), 0, __LINE__);
 
     int plateCfgState = 0;
-    EXEC_EQ(GetIntValFromJson(rootObj, "plateCfgState1", &(plateCfgState)), 0, -1);
-    JUGE((plateCfgState >= PLATE_CONFIG_AUTO && plateCfgState <= PLATE_CONFIG_FULL), -1);
+    EXEC_EQ(GetIntValFromJson(rootObj, "plateCfgState1", &(plateCfgState)), 0, __LINE__);
+    JUGE((plateCfgState >= PLATE_CONFIG_AUTO && plateCfgState <= PLATE_CONFIG_FULL), __LINE__);
     g_Allconfig.placeCfgList[0].plateCfgState = plateCfgState;
     
-    EXEC_EQ(GetIntValFromJson(rootObj, "plateCfgState2", &(plateCfgState)), 0, -1);
-    JUGE((plateCfgState >= PLATE_CONFIG_AUTO && plateCfgState <= PLATE_CONFIG_FULL), -1);
+    EXEC_EQ(GetIntValFromJson(rootObj, "plateCfgState2", &(plateCfgState)), 0, __LINE__);
+    JUGE((plateCfgState >= PLATE_CONFIG_AUTO && plateCfgState <= PLATE_CONFIG_FULL), __LINE__);
     g_Allconfig.placeCfgList[1].plateCfgState = plateCfgState;
 
-    EXEC_EQ(GetIntValFromJson(rootObj, "plateCfgState3", &(plateCfgState)), 0, -1);
-    JUGE((plateCfgState >= PLATE_CONFIG_AUTO && plateCfgState <= PLATE_CONFIG_FULL), -1);
+    EXEC_EQ(GetIntValFromJson(rootObj, "plateCfgState3", &(plateCfgState)), 0, __LINE__);
+    JUGE((plateCfgState >= PLATE_CONFIG_AUTO && plateCfgState <= PLATE_CONFIG_FULL), __LINE__);
     g_Allconfig.placeCfgList[2].plateCfgState = plateCfgState;
 
     DumpConfigToJson(&g_Allconfig);
@@ -2682,7 +2682,7 @@ int ProcGetPlaceStatus(struct ServerProtoHeader *req)
     struct ServerResponseHdr rsp = {0};
     cJSON *rootObj = NULL;
     char *rspdata = NULL;
-    EXEC_NE((rootObj = cJSON_CreateObject()), NULL, -1);
+    EXEC_NE((rootObj = cJSON_CreateObject()), NULL, __LINE__);
 
     cJSON_AddNumberToObject(rootObj, "com", 9);
     cJSON_AddStringToObject(rootObj, "postion", g_Allconfig.postion);
@@ -2737,13 +2737,13 @@ int ProcessSetCtrIPAddr(struct ServerProtoHeader *req)
     JUGE(rootObj != NULL, ERROR);
     
     itmObj = cJSON_GetObjectItem(rootObj, "ControlIP");
-    JUGE(itmObj != NULL, -1);
-    JUGE(itmObj->type == cJSON_String, -1);
+    JUGE(itmObj != NULL, __LINE__);
+    JUGE(itmObj->type == cJSON_String, __LINE__);
     strncpy(g_Allconfig.ControlIP, itmObj->valuestring, sizeof(g_Allconfig.ControlIP));
 
     itmObj = cJSON_GetObjectItem(rootObj, "ControledIP");
-    JUGE(itmObj != NULL, -1);
-    JUGE(itmObj->type == cJSON_String, -1);
+    JUGE(itmObj != NULL, __LINE__);
+    JUGE(itmObj->type == cJSON_String, __LINE__);
     strncpy(g_Allconfig.ControledIP, itmObj->valuestring, sizeof(g_Allconfig.ControledIP));
 
     DumpConfigToJson(&g_Allconfig);
@@ -2769,7 +2769,7 @@ int ProcessGetCtrIPAddr(struct ServerProtoHeader *req)
     struct ServerResponseHdr rsp = {0};
     cJSON *rootObj = NULL;
     char *rspdata = NULL;
-    EXEC_NE((rootObj = cJSON_CreateObject()), NULL, -1);
+    EXEC_NE((rootObj = cJSON_CreateObject()), NULL, __LINE__);
 
     cJSON_AddStringToObject(rootObj, "result", "OK");
     cJSON_AddNumberToObject(rootObj, "com", 18);
@@ -2815,13 +2815,13 @@ int ProcessSetLightSlaveInfo(struct ServerProtoHeader *req)
     JUGE(rootObj != NULL, ERROR);
     
     itmObj = cJSON_GetObjectItem(rootObj, "Mac");
-    JUGE(itmObj != NULL, -1);
-    JUGE(itmObj->type == cJSON_String, -1);
+    JUGE(itmObj != NULL, __LINE__);
+    JUGE(itmObj->type == cJSON_String, __LINE__);
     strncpy(g_Allconfig.LightSlaveMac, itmObj->valuestring, sizeof(g_Allconfig.LightSlaveMac));
 
     itmObj = cJSON_GetObjectItem(rootObj, "IP");
-    JUGE(itmObj != NULL, -1);
-    JUGE(itmObj->type == cJSON_String, -1);
+    JUGE(itmObj != NULL, __LINE__);
+    JUGE(itmObj->type == cJSON_String, __LINE__);
     strncpy(g_Allconfig.LightSlaveIP, itmObj->valuestring, sizeof(g_Allconfig.LightSlaveIP));
 
     DumpConfigToJson(&g_Allconfig);
@@ -2847,7 +2847,7 @@ int ProcessGetPrivateInfo(struct ServerProtoHeader *req)
     struct ServerResponseHdr rsp = {0};
     cJSON *rootObj = NULL;
     char *rspdata = NULL;
-    EXEC_NE((rootObj = cJSON_CreateObject()), NULL, -1);
+    EXEC_NE((rootObj = cJSON_CreateObject()), NULL, __LINE__);
 
     cJSON_AddStringToObject(rootObj, "result", "OK");
     cJSON_AddNumberToObject(rootObj, "com", 0);
@@ -2925,7 +2925,7 @@ int ProcessGetPlateInfo(struct ServerProtoHeader *req)
     struct ServerResponseHdr rsp = {0};
     cJSON *rootObj = NULL;
     char *rspdata = NULL;
-    EXEC_NE((rootObj = cJSON_CreateObject()), NULL, -1);
+    EXEC_NE((rootObj = cJSON_CreateObject()), NULL, __LINE__);
 
     cJSON_AddStringToObject(rootObj, "result", "OK");
     cJSON_AddNumberToObject(rootObj, "com", 21);
