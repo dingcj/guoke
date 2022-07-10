@@ -32,6 +32,24 @@ extern "C" {
 #include "shareHeader.h"
 #include "watchdog.h"
 
+const char *log_server = "10.10.10.10";
+const uint32_t bufferSize = 1400;
+const uint32_t enb_log = 1;
+
+void send_udp_str(char *ip, int port, char* str);
+#define SYSLOG_PRT(fmt...)   \
+    do {\
+        char logBuffer[bufferSize]; \
+        int ret = snprintf(logBuffer, sizeof(logBuffer), "[%s]-%d: ", __FUNCTION__, __LINE__);\
+        snprintf(logBuffer + ret, sizeof(logBuffer) - ret, fmt); \
+        logBuffer[bufferSize - 1] = '\0'; \
+        puts(logBuffer); \
+        if (enb_log) { \
+            send_udp_str("10.10.10.10", 514, logBuffer); \
+        } \
+    }while(0)
+
+
 #define BIG_STREAM_SIZE     PIC_2688x1944
 #define SMALL_STREAM_SIZE   PIC_VGA
 
@@ -218,9 +236,34 @@ void init_wdt()
     snprintf(buffer, sizeof(buffer), "insmod /ko/gk7205v200_wdt.ko default_margin=%u nodeamon=1", margin);
     int ret = system(buffer);
     if (ret != 0) {
-        SAMPLE_PRT("%s - %u\n", strerror(errno), ret);
+        SYSLOG_PRT("%s - %u\n", strerror(errno), ret);
     }
 }
+
+void send_udp_str(char *ip, int port, char* str)
+{
+    if (str == NULL || strlen(str) > bufferSize - 1) {
+        return;
+    }
+    struct sockaddr_in server;
+    int fd = 0;
+    int server_len = sizeof(struct sockaddr_in);
+    if ((fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
+        perror("send_udp_str");
+        return;
+    }
+	bzero(&server, sizeof(server));
+	server.sin_family = AF_INET;
+	server.sin_port = htons(port);
+	server.sin_addr.s_addr = inet_addr(ip);
+    
+	if (sendto(fd, str, strlen(str), 0, (struct sockaddr *) &server, server_len) < 0) {
+        perror("sendto error");
+        return;
+	}
+	close(fd);
+}
+
 
 void feed_wdt()
 {
@@ -238,7 +281,7 @@ void feed_wdt()
 
 int WriteStringToFile(const char *str, const char *file)
 {
-    SAMPLE_PRT("STR: %s, file: %s\n", str, file);
+    SYSLOG_PRT("STR: %s, file: %s\n", str, file);
     FILE *fp = fopen(file, "w");
     if (fp == NULL) {
         perror("WriteStringToFile");
@@ -305,7 +348,7 @@ int ProcPostInfoToServer(FifoRing *fifo)
     }
 
     PostInfoItem *itm = (PostInfoItem *)tmp;
-    //SAMPLE_PRT(itm->postData);
+    //SYSLOG_PRT(itm->postData);
     if (strlen(itm->postUrl) != 0) {
         post_json_to_server(itm->postUrl, itm->postData, NULL, 0);
     }
@@ -337,7 +380,7 @@ int GetSlaveParkingPlaceState(uint16_t *bitmap)
     JUGE(ret == 0, PARKING_PLACE_FULL);
 
     rspBuf[sizeof(rspBuf) - 1] = '\0';
-    SAMPLE_PRT("%s\n", rspBuf);
+    SYSLOG_PRT("%s\n", rspBuf);
 
     rootObj = cJSON_Parse(rspBuf);
     JUGE(rootObj != NULL, PARKING_PLACE_FULL);
@@ -349,7 +392,7 @@ int GetSlaveParkingPlaceState(uint16_t *bitmap)
     if ((parkingBitmap != NULL) && (parkingBitmap->type == cJSON_Number)) {
         *bitmap = (uint16_t)(parkingBitmap->valueint);
     } else {
-        SAMPLE_PRT("Error response: %s\n", rspBuf);
+        SYSLOG_PRT("Error response: %s\n", rspBuf);
     }
 
     ret = parkingStateObj->valueint;
@@ -383,7 +426,7 @@ int SendDataTo485(uint8_t *data, uint32_t len)
     }
     pos += snprintf(postData + pos, totalLen - pos, "\"}");
     ret = pos;
-    SAMPLE_PRT("SendDataTo485: %s\n", postData);
+    SYSLOG_PRT("SendDataTo485: %s\n", postData);
 
     char url[128] = {0};
     snprintf(url, sizeof(url), "http://%s:8080/cgi-bin/ctrcgi", g_Allconfig.ControlIP);
@@ -437,17 +480,17 @@ int ProcCtrlLightStatus(FifoRing *fifo)
 
     uint16_t slaveBitMap = 0u;
     int slaveState = GetSlaveParkingPlaceState(&slaveBitMap);
-    SAMPLE_PRT("slaveState: %d, masterState: %d\n", slaveState, g_prevParkingPlaceState);
+    SYSLOG_PRT("slaveState: %d, masterState: %d\n", slaveState, g_prevParkingPlaceState);
     
     char jsonBuf[128] = {0};
     char url[128] = {0};
     int color = ((g_prevParkingPlaceState == PARKING_PLACE_FULL) && (slaveState == PARKING_PLACE_FULL)) ? 
         (LIGHT_RED) : LIGHT_GREEN;
     snprintf(jsonBuf, sizeof(jsonBuf), "{\"com\":6, \"color\":%d, \"type\":%d}", LIGHT_MANDATORY, color + 1);
-    SAMPLE_PRT("%s\n", jsonBuf);
+    SYSLOG_PRT("%s\n", jsonBuf);
     
     snprintf(url, sizeof(url), "http://%s:8080/cgi-bin/ctrcgi", g_Allconfig.ControlIP);
-    SAMPLE_PRT("%s\n", url);
+    SYSLOG_PRT("%s\n", url);
     post_json_to_server(url, jsonBuf, NULL, 0);
 
     uint8_t bitMap = (uint8_t)(slaveBitMap & 0xff);
@@ -482,7 +525,7 @@ void * PostInfoToServerThread(void *p)
         if (!procWork) {
             sleep(1);
         } else {
-            SAMPLE_PRT("PostInfoToServerThread procWork: %d\n", procWork);
+            SYSLOG_PRT("PostInfoToServerThread procWork: %d\n", procWork);
         }
     }
 
@@ -691,7 +734,7 @@ int ParseConfigJson(const char *cfgfile, ParkingGuidanceParamStru *cfg)
     
     fp = fopen(cfgfile,"rb");
     if (fp == NULL) {
-        SAMPLE_PRT("Open config file failed!\n");
+        SYSLOG_PRT("Open config file failed!\n");
         ret = -1;
         goto RET;
     }
@@ -702,7 +745,7 @@ int ParseConfigJson(const char *cfgfile, ParkingGuidanceParamStru *cfg)
     
     data = (char*)malloc(len + 1);
     if (data == NULL) {
-        SAMPLE_PRT("Malloc memory error!\n");
+        SYSLOG_PRT("Malloc memory error!\n");
         ret = -1;
         goto RET;
     }
@@ -710,14 +753,14 @@ int ParseConfigJson(const char *cfgfile, ParkingGuidanceParamStru *cfg)
     fread(data, 1, len, fp);
     rootObj = cJSON_Parse(data);
     if (rootObj == NULL) {
-        SAMPLE_PRT("cJSON_Parse error!\n");
+        SYSLOG_PRT("cJSON_Parse error!\n");
         ret = -1;
         goto RET;
     }
 
     ret = GetStringValFromJson(rootObj, "postJpegUrl", cfg->postJpegUrl, sizeof(cfg->postJpegUrl));
     if (ret != 0) {
-        SAMPLE_PRT("get postJpegUrl from config file failed!\n");
+        SYSLOG_PRT("get postJpegUrl from config file failed!\n");
         memset(cfg->postJpegUrl, 0, sizeof(cfg->postJpegUrl));
     }
 
@@ -726,7 +769,7 @@ int ParseConfigJson(const char *cfgfile, ParkingGuidanceParamStru *cfg)
 
     ret = GetStringValFromJson(rootObj, "postHeartBeatUrl", cfg->postHeartBeatUrl, sizeof(cfg->postHeartBeatUrl));
     if (ret != 0) {
-        SAMPLE_PRT("get postHeartBeatUrl from config file failed!\n");
+        SYSLOG_PRT("get postHeartBeatUrl from config file failed!\n");
         memset(cfg->postHeartBeatUrl, 0, sizeof(cfg->postHeartBeatUrl));
     }
 
@@ -837,7 +880,7 @@ Begin_Get:
             enGopMode = VENC_GOPMODE_SMARTP;
             break;
         default:
-            SAMPLE_PRT("input rcmode: %c, is invaild!\n",c);
+            SYSLOG_PRT("input rcmode: %c, is invaild!\n",c);
             goto Begin_Get;
     }
 
@@ -882,7 +925,7 @@ Begin_Get:
             enRcMode = SAMPLE_RC_QVBR;
             break;
         default:
-            SAMPLE_PRT("input rcmode: %c, is invaild!\n",c);
+            SYSLOG_PRT("input rcmode: %c, is invaild!\n",c);
             goto Begin_Get;
     }
     return enRcMode;
@@ -910,7 +953,7 @@ Begin_Get:
             break;
 
         default:
-            SAMPLE_PRT("input IntraRefresh Mode: %c, is invaild!\n",c);
+            SYSLOG_PRT("input IntraRefresh Mode: %c, is invaild!\n",c);
             goto Begin_Get;
     }
     return enIntraRefreshMode;
@@ -964,10 +1007,10 @@ static HI_U32 GetFullLinesStdFromSensorType(SAMPLE_SNS_TYPE_E enSnsType)
             FullLinesStd = 1350;                     /* 1350 sensor SC3235 full lines */
             break;
         case OMNIVISION_OS05A_MIPI_5M_30FPS_12BIT:
-            SAMPLE_PRT("Error: sensor type %d resolution out of limits, not support ring!\n",enSnsType);
+            SYSLOG_PRT("Error: sensor type %d resolution out of limits, not support ring!\n",enSnsType);
             break;
         default:
-            SAMPLE_PRT("Error: Not support this sensor now! ==> %d\n",enSnsType);
+            SYSLOG_PRT("Error: Not support this sensor now! ==> %d\n",enSnsType);
             break;
     }
 
@@ -996,13 +1039,13 @@ static HI_VOID GetSensorResolution(SAMPLE_SNS_TYPE_E enSnsType, SIZE_S *pSnsSize
     ret = SAMPLE_COMM_VI_GetSizeBySensor(enSnsType, &enSnsSize);
     if (HI_SUCCESS != ret)
     {
-        SAMPLE_PRT("SAMPLE_COMM_VI_GetSizeBySensor failed!\n");
+        SYSLOG_PRT("SAMPLE_COMM_VI_GetSizeBySensor failed!\n");
         return;
     }
     ret = SAMPLE_COMM_SYS_GetPicSize(enSnsSize, &SnsSize);
     if (HI_SUCCESS != ret)
     {
-        SAMPLE_PRT("SAMPLE_COMM_SYS_GetPicSize failed!\n");
+        SYSLOG_PRT("SAMPLE_COMM_SYS_GetPicSize failed!\n");
         return;
     }
 
@@ -1069,7 +1112,7 @@ HI_S32 SAMPLE_VENC_SYS_Init(SAMPLE_VB_ATTR_S *pCommVbAttr)
 
     if (pCommVbAttr->validNum > VB_MAX_COMM_POOLS)
     {
-        SAMPLE_PRT("SAMPLE_VENC_SYS_Init validNum(%d) too large than VB_MAX_COMM_POOLS(%d)!\n", pCommVbAttr->validNum, VB_MAX_COMM_POOLS);
+        SYSLOG_PRT("SAMPLE_VENC_SYS_Init validNum(%d) too large than VB_MAX_COMM_POOLS(%d)!\n", pCommVbAttr->validNum, VB_MAX_COMM_POOLS);
         return HI_FAILURE;
     }
 
@@ -1095,7 +1138,7 @@ HI_S32 SAMPLE_VENC_SYS_Init(SAMPLE_VB_ATTR_S *pCommVbAttr)
 
     if (HI_SUCCESS != s32Ret)
     {
-        SAMPLE_PRT("SAMPLE_COMM_SYS_GetPicSize failed!\n");
+        SYSLOG_PRT("SAMPLE_COMM_SYS_GetPicSize failed!\n");
         return s32Ret;
     }
 
@@ -1166,7 +1209,7 @@ HI_S32 SAMPLE_VENC_VI_Init( SAMPLE_VI_CONFIG_S *pstViConfig, VI_VPSS_MODE_E ViVp
     s32Ret = SAMPLE_COMM_VI_SetParam(pstViConfig);
     if (HI_SUCCESS != s32Ret)
     {
-        SAMPLE_PRT("SAMPLE_COMM_VI_SetParam failed with %d!\n", s32Ret);
+        SYSLOG_PRT("SAMPLE_COMM_VI_SetParam failed with %d!\n", s32Ret);
         return s32Ret;
     }
 
@@ -1175,7 +1218,7 @@ HI_S32 SAMPLE_VENC_VI_Init( SAMPLE_VI_CONFIG_S *pstViConfig, VI_VPSS_MODE_E ViVp
     s32Ret = HI_MPI_ISP_GetCtrlParam(pstViConfig->astViInfo[0].stPipeInfo.aPipe[0], &stIspCtrlParam);
     if (HI_SUCCESS != s32Ret)
     {
-        SAMPLE_PRT("HI_MPI_ISP_GetCtrlParam failed with %d!\n", s32Ret);
+        SYSLOG_PRT("HI_MPI_ISP_GetCtrlParam failed with %d!\n", s32Ret);
         return s32Ret;
     }
     stIspCtrlParam.u32StatIntvl  = u32FrameRate/30;
@@ -1187,7 +1230,7 @@ HI_S32 SAMPLE_VENC_VI_Init( SAMPLE_VI_CONFIG_S *pstViConfig, VI_VPSS_MODE_E ViVp
     s32Ret = HI_MPI_ISP_SetCtrlParam(pstViConfig->astViInfo[0].stPipeInfo.aPipe[0], &stIspCtrlParam);
     if (HI_SUCCESS != s32Ret)
     {
-        SAMPLE_PRT("HI_MPI_ISP_SetCtrlParam failed with %d!\n", s32Ret);
+        SYSLOG_PRT("HI_MPI_ISP_SetCtrlParam failed with %d!\n", s32Ret);
         return s32Ret;
     }
 
@@ -1195,7 +1238,7 @@ HI_S32 SAMPLE_VENC_VI_Init( SAMPLE_VI_CONFIG_S *pstViConfig, VI_VPSS_MODE_E ViVp
     if (HI_SUCCESS != s32Ret)
     {
         SAMPLE_COMM_SYS_Exit();
-        SAMPLE_PRT("SAMPLE_COMM_VI_StartVi failed with %d!\n", s32Ret);
+        SYSLOG_PRT("SAMPLE_COMM_VI_StartVi failed with %d!\n", s32Ret);
         return s32Ret;
     }
 
@@ -1212,14 +1255,14 @@ static HI_S32 SAMPLE_VENC_VPSS_CreateGrp(VPSS_GRP VpssGrp, SAMPLE_VPSS_CHN_ATTR_
     s32Ret = SAMPLE_COMM_VI_GetSizeBySensor(pParam->enSnsType, &enSnsSize);
     if (HI_SUCCESS != s32Ret)
     {
-        SAMPLE_PRT("SAMPLE_COMM_VI_GetSizeBySensor failed!\n");
+        SYSLOG_PRT("SAMPLE_COMM_VI_GetSizeBySensor failed!\n");
         return s32Ret;
     }
 
     s32Ret = SAMPLE_COMM_SYS_GetPicSize(enSnsSize, &stSnsSize);
     if (HI_SUCCESS != s32Ret)
     {
-        SAMPLE_PRT("SAMPLE_COMM_SYS_GetPicSize failed!\n");
+        SYSLOG_PRT("SAMPLE_COMM_SYS_GetPicSize failed!\n");
         return s32Ret;
     }
 
@@ -1238,7 +1281,7 @@ static HI_S32 SAMPLE_VENC_VPSS_CreateGrp(VPSS_GRP VpssGrp, SAMPLE_VPSS_CHN_ATTR_
 
     if (s32Ret != HI_SUCCESS)
     {
-        SAMPLE_PRT("HI_MPI_VPSS_CreateGrp(grp:%d) failed with %#x!\n", VpssGrp, s32Ret);
+        SYSLOG_PRT("HI_MPI_VPSS_CreateGrp(grp:%d) failed with %#x!\n", VpssGrp, s32Ret);
         return HI_FAILURE;
     }
 
@@ -1252,7 +1295,7 @@ static HI_S32 SAMPLE_VENC_VPSS_DestoryGrp(VPSS_GRP VpssGrp)
     s32Ret = HI_MPI_VPSS_DestroyGrp(VpssGrp);
     if (s32Ret != HI_SUCCESS)
     {
-        SAMPLE_PRT("failed with %#x!\n", s32Ret);
+        SYSLOG_PRT("failed with %#x!\n", s32Ret);
         return HI_FAILURE;
     }
 
@@ -1266,7 +1309,7 @@ static HI_S32 SAMPLE_VENC_VPSS_StartGrp(VPSS_GRP VpssGrp)
     s32Ret = HI_MPI_VPSS_StartGrp(VpssGrp);
     if (s32Ret != HI_SUCCESS)
     {
-        SAMPLE_PRT("HI_MPI_VPSS_CreateGrp(grp:%d) failed with %#x!\n", VpssGrp, s32Ret);
+        SYSLOG_PRT("HI_MPI_VPSS_CreateGrp(grp:%d) failed with %#x!\n", VpssGrp, s32Ret);
         return HI_FAILURE;
     }
 
@@ -1302,7 +1345,7 @@ static HI_S32 SAMPLE_VENC_VPSS_ChnEnable(VPSS_GRP VpssGrp, VPSS_CHN VpssChn, SAM
     s32Ret = HI_MPI_VPSS_SetChnAttr(VpssGrp, VpssChn, &stVpssChnAttr);
     if (s32Ret != HI_SUCCESS)
     {
-        SAMPLE_PRT("HI_MPI_VPSS_SetChnAttr chan %d failed with %#x\n", VpssChn, s32Ret);
+        SYSLOG_PRT("HI_MPI_VPSS_SetChnAttr chan %d failed with %#x\n", VpssChn, s32Ret);
         goto exit0;
     }
 
@@ -1310,7 +1353,7 @@ static HI_S32 SAMPLE_VENC_VPSS_ChnEnable(VPSS_GRP VpssGrp, VPSS_CHN VpssChn, SAM
     {
         if (VpssChn != 0)   //vpss limit! just vpss chan0 support wrap
         {
-            SAMPLE_PRT("Error:Just vpss chan 0 support wrap! Current chan %d\n", VpssChn);
+            SYSLOG_PRT("Error:Just vpss chan 0 support wrap! Current chan %d\n", VpssChn);
             goto exit0;
         }
 
@@ -1339,13 +1382,13 @@ static HI_S32 SAMPLE_VENC_VPSS_ChnEnable(VPSS_GRP VpssGrp, VPSS_CHN VpssChn, SAM
             s32Ret = HI_MPI_VPSS_SetChnBufWrapAttr(VpssGrp, VpssChn, &stVpssChnBufWrap);
             if (s32Ret != HI_SUCCESS)
             {
-                SAMPLE_PRT("HI_MPI_VPSS_SetChnBufWrapAttr Chn %d failed with %#x\n", VpssChn, s32Ret);
+                SYSLOG_PRT("HI_MPI_VPSS_SetChnBufWrapAttr Chn %d failed with %#x\n", VpssChn, s32Ret);
                 goto exit0;
             }
         }
         else
         {
-            SAMPLE_PRT("Current sensor type: %d, not support BigStream(%dx%d) and SmallStream(%dx%d) Ring!!\n",
+            SYSLOG_PRT("Current sensor type: %d, not support BigStream(%dx%d) and SmallStream(%dx%d) Ring!!\n",
                 pParam->enSnsType,
                 pParam->stOutPutSize[pParam->BigStreamId].u32Width, pParam->stOutPutSize[pParam->BigStreamId].u32Height,
                 pParam->stOutPutSize[pParam->SmallStreamId].u32Width, pParam->stOutPutSize[pParam->SmallStreamId].u32Height);
@@ -1356,7 +1399,7 @@ static HI_S32 SAMPLE_VENC_VPSS_ChnEnable(VPSS_GRP VpssGrp, VPSS_CHN VpssChn, SAM
     s32Ret = HI_MPI_VPSS_EnableChn(VpssGrp, VpssChn);
     if (s32Ret != HI_SUCCESS)
     {
-        SAMPLE_PRT("HI_MPI_VPSS_EnableChn (%d) failed with %#x\n", VpssChn, s32Ret);
+        SYSLOG_PRT("HI_MPI_VPSS_EnableChn (%d) failed with %#x\n", VpssChn, s32Ret);
         goto exit0;
     }
 
@@ -1372,7 +1415,7 @@ static HI_S32 SAMPLE_VENC_VPSS_ChnDisable(VPSS_GRP VpssGrp, VPSS_CHN VpssChn)
 
     if (s32Ret != HI_SUCCESS)
     {
-        SAMPLE_PRT("failed with %#x!\n", s32Ret);
+        SYSLOG_PRT("failed with %#x!\n", s32Ret);
         return HI_FAILURE;
     }
 
@@ -1541,19 +1584,19 @@ HI_S32 SAMPLE_VENC_CheckSensor(SAMPLE_SNS_TYPE_E   enSnsType,SIZE_S  stSize)
     s32Ret = SAMPLE_COMM_VI_GetSizeBySensor(enSnsType, &enSnsSize);
     if (HI_SUCCESS != s32Ret)
     {
-        SAMPLE_PRT("SAMPLE_COMM_VI_GetSizeBySensor failed!\n");
+        SYSLOG_PRT("SAMPLE_COMM_VI_GetSizeBySensor failed!\n");
         return s32Ret;
     }
     s32Ret = SAMPLE_COMM_SYS_GetPicSize(enSnsSize, &stSnsSize);
     if (HI_SUCCESS != s32Ret)
     {
-        SAMPLE_PRT("SAMPLE_COMM_SYS_GetPicSize failed!\n");
+        SYSLOG_PRT("SAMPLE_COMM_SYS_GetPicSize failed!\n");
         return s32Ret;
     }
 
     if((stSnsSize.u32Width < stSize.u32Width) || (stSnsSize.u32Height < stSize.u32Height))
     {
-        //SAMPLE_PRT("Sensor size is (%d,%d), but encode chnl is (%d,%d) !\n",
+        //SYSLOG_PRT("Sensor size is (%d,%d), but encode chnl is (%d,%d) !\n",
             //stSnsSize.u32Width,stSnsSize.u32Height,stSize.u32Width,stSize.u32Height);
         return HI_FAILURE;
     }
@@ -1570,13 +1613,13 @@ HI_S32 SAMPLE_VENC_ModifyResolution(SAMPLE_SNS_TYPE_E   enSnsType,PIC_SIZE_E *pe
     s32Ret = SAMPLE_COMM_VI_GetSizeBySensor(enSnsType, &enSnsSize);
     if (HI_SUCCESS != s32Ret)
     {
-        SAMPLE_PRT("SAMPLE_COMM_VI_GetSizeBySensor failed!\n");
+        SYSLOG_PRT("SAMPLE_COMM_VI_GetSizeBySensor failed!\n");
         return s32Ret;
     }
     s32Ret = SAMPLE_COMM_SYS_GetPicSize(enSnsSize, &stSnsSize);
     if (HI_SUCCESS != s32Ret)
     {
-        SAMPLE_PRT("SAMPLE_COMM_SYS_GetPicSize failed!\n");
+        SYSLOG_PRT("SAMPLE_COMM_SYS_GetPicSize failed!\n");
         return s32Ret;
     }
 
@@ -1610,7 +1653,7 @@ void PlateYuvCropping(VIDEO_FRAME_INFO_S *srcFrame, HI_U8 *dstYuvBuff,
     HI_U8 *psrcVirYaddr = (HI_U8 *)HI_MPI_SYS_Mmap(srcFrame->stVFrame.u64PhyAddr[0], u32BlkSize);    
     if (psrcVirYaddr == NULL)
     {
-        SAMPLE_PRT("Plate_yuv_cropping HI_MPI_SYS_Mmap failed\n");
+        SYSLOG_PRT("Plate_yuv_cropping HI_MPI_SYS_Mmap failed\n");
         return;
     }
 
@@ -1678,12 +1721,12 @@ HI_S32 PlateReplaceFrameFromFile(FILE *fp, VIDEO_FRAME_INFO_S *frame)
 
     if (frame->stVFrame.enPixelFormat != PIXEL_FORMAT_YVU_SEMIPLANAR_420)
     {
-        SAMPLE_PRT("Plate_yuv_cropping unsupport pixel format - %d - %d\n", frame->stVFrame.enPixelFormat, PIXEL_FORMAT_YVU_SEMIPLANAR_420);
+        SYSLOG_PRT("Plate_yuv_cropping unsupport pixel format - %d - %d\n", frame->stVFrame.enPixelFormat, PIXEL_FORMAT_YVU_SEMIPLANAR_420);
         return -1;
     }
 
     (void) fseek(fp, 0L, SEEK_SET);
-    SAMPLE_PRT("u32Stride[0]: %u, u32Stride[1]: %u, width: %u, height: %u\n", frame->stVFrame.u32Stride[0],
+    SYSLOG_PRT("u32Stride[0]: %u, u32Stride[1]: %u, width: %u, height: %u\n", frame->stVFrame.u32Stride[0],
         frame->stVFrame.u32Stride[1], frame->stVFrame.u32Width, frame->stVFrame.u32Height);
     dataSize = (frame->stVFrame.u32Stride[0]) * (frame->stVFrame.u32Height) * 3 / 2;
     
@@ -1692,7 +1735,7 @@ HI_S32 PlateReplaceFrameFromFile(FILE *fp, VIDEO_FRAME_INFO_S *frame)
     pUserVirtAddr = (HI_U8*) HI_MPI_SYS_Mmap(phy_addr, dataSize);
     if (HI_NULL == pUserVirtAddr)
     {
-        SAMPLE_PRT("PlateReplaceFrameFromFile HI_MPI_SYS_Mmap failed.");
+        SYSLOG_PRT("PlateReplaceFrameFromFile HI_MPI_SYS_Mmap failed.");
         return -1;
     }
 
@@ -1703,7 +1746,7 @@ HI_S32 PlateReplaceFrameFromFile(FILE *fp, VIDEO_FRAME_INFO_S *frame)
         if (ret != frame->stVFrame.u32Width)
         {
             perror("fread error");
-            SAMPLE_PRT("PlateReplaceFrameFromFile fread1 failed, ret: %u\n.", ret);
+            SYSLOG_PRT("PlateReplaceFrameFromFile fread1 failed, ret: %u\n.", ret);
             (void) fseek(fp, 0L, SEEK_SET);
             HI_MPI_SYS_Munmap(pUserVirtAddr, dataSize);
             return -1;
@@ -1717,7 +1760,7 @@ HI_S32 PlateReplaceFrameFromFile(FILE *fp, VIDEO_FRAME_INFO_S *frame)
         ret = fread(start, 1, frame->stVFrame.u32Width, fp);
         if (ret != frame->stVFrame.u32Width)
         {
-            SAMPLE_PRT("PlateReplaceFrameFromFile fread2 failed.");
+            SYSLOG_PRT("PlateReplaceFrameFromFile fread2 failed.");
             (void) fseek(fp, 0L, SEEK_SET);
             HI_MPI_SYS_Munmap(pUserVirtAddr, dataSize);
             return -1;
@@ -1764,13 +1807,13 @@ HI_S32 FillPlateFrame(VIDEO_FRAME_INFO_S *srcFrame, VIDEO_FRAME_INFO_S *plateFra
     
     HI_U8 *pSrcVirtAddr = (HI_U8*) HI_MPI_SYS_Mmap(srcFrame->stVFrame.u64PhyAddr[0], srcDataSize);
     if (pSrcVirtAddr == NULL) {
-        SAMPLE_PRT("FillPlateFrame HI_MPI_SYS_Mmap src frame failed.\n");
+        SYSLOG_PRT("FillPlateFrame HI_MPI_SYS_Mmap src frame failed.\n");
         return -1;
     }
     HI_U8 *pDstVirtAddr = (HI_U8*) HI_MPI_SYS_Mmap(phyAddr, dstDataSize);
     if (pDstVirtAddr == NULL) {
         HI_MPI_SYS_Munmap(pSrcVirtAddr, srcDataSize);
-        SAMPLE_PRT("FillPlateFrame HI_MPI_SYS_Mmap dst frame failed.\n");
+        SYSLOG_PRT("FillPlateFrame HI_MPI_SYS_Mmap dst frame failed.\n");
         return -1;
     }
 
@@ -1820,7 +1863,7 @@ HI_S32 GetJpgdataFromStream(VENC_STREAM_S *pstStream, HI_U8 **jpgData, HI_U32 *d
     data_buf = (HI_U8 *)malloc(totalLen + 1);
     if (data_buf == NULL)
     {
-        SAMPLE_PRT("Plate_get_jpgdata_from_stream malloc failed!\n");
+        SYSLOG_PRT("Plate_get_jpgdata_from_stream malloc failed!\n");
         return -1;
     }
     
@@ -1865,7 +1908,7 @@ HI_S32 GetJpegDataFromVenc(VENC_CHN VencChn, HI_U8 **jpgData, HI_U32 *jpgDataLen
             s32Ret = HI_MPI_VPSS_TriggerSnapFrame(stSrcChn.s32DevId, stSrcChn.s32ChnId, 1);
             if (s32Ret != HI_SUCCESS)
             {
-                SAMPLE_PRT("call HI_MPI_VPSS_TriggerSnapFrame Grp = %d, ChanId = %d, SnapCnt = %d return failed(0x%x)!\n",
+                SYSLOG_PRT("call HI_MPI_VPSS_TriggerSnapFrame Grp = %d, ChanId = %d, SnapCnt = %d return failed(0x%x)!\n",
                     stSrcChn.s32DevId, stSrcChn.s32ChnId, 1, s32Ret);
 
                 return HI_FAILURE;
@@ -1879,7 +1922,7 @@ HI_S32 GetJpegDataFromVenc(VENC_CHN VencChn, HI_U8 **jpgData, HI_U32 *jpgDataLen
     s32VencFd = HI_MPI_VENC_GetFd(VencChn);
     if (s32VencFd < 0)
     {
-        SAMPLE_PRT("HI_MPI_VENC_GetFd faild with%#x!\n", s32VencFd);
+        SYSLOG_PRT("HI_MPI_VENC_GetFd faild with%#x!\n", s32VencFd);
         return HI_FAILURE;
     }
 
@@ -1890,12 +1933,12 @@ HI_S32 GetJpegDataFromVenc(VENC_CHN VencChn, HI_U8 **jpgData, HI_U32 *jpgDataLen
     s32Ret = select(s32VencFd + 1, &read_fds, NULL, NULL, &TimeoutVal);
     if (s32Ret < 0)
     {
-        SAMPLE_PRT("snap select failed!\n");
+        SYSLOG_PRT("snap select failed!\n");
         return HI_FAILURE;
     }
     else if (0 == s32Ret)
     {
-        SAMPLE_PRT("snap time out!\n");
+        SYSLOG_PRT("snap time out!\n");
         return HI_FAILURE;
     }
     else
@@ -1905,43 +1948,43 @@ HI_S32 GetJpegDataFromVenc(VENC_CHN VencChn, HI_U8 **jpgData, HI_U32 *jpgDataLen
             s32Ret = HI_MPI_VENC_QueryStatus(VencChn, &stStat);
             if (s32Ret != HI_SUCCESS)
             {
-                SAMPLE_PRT("HI_MPI_VENC_QueryStatus failed with %#x!\n", s32Ret);
+                SYSLOG_PRT("HI_MPI_VENC_QueryStatus failed with %#x!\n", s32Ret);
                 return HI_FAILURE;
             }
             /*******************************************************
             suggest to check both u32CurPacks and u32LeftStreamFrames at the same time,for example:
              if(0 == stStat.u32CurPacks || 0 == stStat.u32LeftStreamFrames)
-             {                SAMPLE_PRT("NOTE: Current  frame is NULL!\n");
+             {                SYSLOG_PRT("NOTE: Current  frame is NULL!\n");
                 return HI_SUCCESS;
              }
              *******************************************************/
             if (0 == stStat.u32CurPacks)
             {
-                SAMPLE_PRT("NOTE: Current  frame is NULL!\n");
+                SYSLOG_PRT("NOTE: Current  frame is NULL!\n");
                 return HI_SUCCESS;
             }
             stStream.pstPack = (VENC_PACK_S*)malloc(sizeof(VENC_PACK_S) * stStat.u32CurPacks);
             if (NULL == stStream.pstPack)
             {
-                SAMPLE_PRT("malloc memory failed!\n");
+                SYSLOG_PRT("malloc memory failed!\n");
                 return HI_FAILURE;
             }
             stStream.u32PackCount = stStat.u32CurPacks;
             s32Ret = HI_MPI_VENC_GetStream(VencChn, &stStream, -1);
             if (HI_SUCCESS != s32Ret)
             {
-                SAMPLE_PRT("HI_MPI_VENC_GetStream failed with %#x!\n", s32Ret);
+                SYSLOG_PRT("HI_MPI_VENC_GetStream failed with %#x!\n", s32Ret);
 
                 free(stStream.pstPack);
                 stStream.pstPack = NULL;
                 return HI_FAILURE;
             }
-            //SAMPLE_PRT("Get jpeg stream success, XXXXXXXXXXXXXXXXXX\n");
+            //SYSLOG_PRT("Get jpeg stream success, XXXXXXXXXXXXXXXXXX\n");
             GetJpgdataFromStream(&stStream, jpgData, jpgDataLen);
             s32Ret = HI_MPI_VENC_ReleaseStream(VencChn, &stStream);
             if (HI_SUCCESS != s32Ret)
             {
-                SAMPLE_PRT("HI_MPI_VENC_ReleaseStream failed with %#x!\n", s32Ret);
+                SYSLOG_PRT("HI_MPI_VENC_ReleaseStream failed with %#x!\n", s32Ret);
 
                 free(stStream.pstPack);
                 stStream.pstPack = NULL;
@@ -1963,18 +2006,18 @@ HI_U8 *EncodeYuvDataToJpegData(VENC_CHN VencChn, VIDEO_FRAME_INFO_S *frame, HI_U
     HI_S32 ret = HI_MPI_VENC_GetChnAttr(VencChn, &stAttr);
     if (ret != 0)
     {
-        SAMPLE_PRT("HI_MPI_VENC_GetChnAttr failed - %d!\n", ret);
+        SYSLOG_PRT("HI_MPI_VENC_GetChnAttr failed - %d!\n", ret);
         return NULL;
     }
 
-    SAMPLE_PRT("EncodeYuvDataToJpegData frame, width: %d, height: %d\n", 
+    SYSLOG_PRT("EncodeYuvDataToJpegData frame, width: %d, height: %d\n", 
         frame->stVFrame.u32Width, frame->stVFrame.u32Height);
     stAttr.stVencAttr.u32PicWidth = frame->stVFrame.u32Width;
     stAttr.stVencAttr.u32PicHeight = frame->stVFrame.u32Height;
     ret = HI_MPI_VENC_SetChnAttr(VencChn, &stAttr);
     if (ret != HI_SUCCESS)
     {
-        SAMPLE_PRT("HI_MPI_VENC_SetChnAttr failed - 0x%08x!\n", ret);
+        SYSLOG_PRT("HI_MPI_VENC_SetChnAttr failed - 0x%08x!\n", ret);
         return NULL;
     }
 
@@ -1985,7 +2028,7 @@ HI_U8 *EncodeYuvDataToJpegData(VENC_CHN VencChn, VIDEO_FRAME_INFO_S *frame, HI_U
     ret = HI_MPI_VENC_SendFrame(VencChn, frame ,-1);
     if (ret != HI_SUCCESS)
     {
-        SAMPLE_PRT("HI_MPI_VENC_SendFrame failed - 0X%08x!\n", (HI_U32)ret);
+        SYSLOG_PRT("HI_MPI_VENC_SendFrame failed - 0X%08x!\n", (HI_U32)ret);
     }
     GetJpegDataFromVenc(VencChn, jpgData, jpgDataLen);
 
@@ -2003,18 +2046,18 @@ HI_S32 CallPlateCarDetectAlg(VIDEO_FRAME_INFO_S *frame, PARKING_GUIDANCE_OUT_INF
     uint32_t equipment = HI_FALSE;
     #ifdef EQUIPMENT_MODE
     equipment = HI_TRUE;
-    SAMPLE_PRT("CallPlateCarDetectAlg Run on EQUIPMENT_MODE\n");
+    SYSLOG_PRT("CallPlateCarDetectAlg Run on EQUIPMENT_MODE\n");
     #endif 
 
     HI_S32 ret = 0;
     
     if (frame->stVFrame.enPixelFormat != PIXEL_FORMAT_YVU_SEMIPLANAR_420)
     {
-        SAMPLE_PRT("CallPlateCarDetectAlg unsupport pixel format - %d\n", frame->stVFrame.enPixelFormat);
+        SYSLOG_PRT("CallPlateCarDetectAlg unsupport pixel format - %d\n", frame->stVFrame.enPixelFormat);
         return -1;
     }
     if (frame->stVFrame.u32Stride[0] != frame->stVFrame.u32Width) {
-        SAMPLE_PRT("CallPlateCarDetectAlg  stride and width is not equal, %u %u\n", 
+        SYSLOG_PRT("CallPlateCarDetectAlg  stride and width is not equal, %u %u\n", 
             frame->stVFrame.u32Stride[0], frame->stVFrame.u32Width);
         return -1;
     }
@@ -2023,7 +2066,7 @@ HI_S32 CallPlateCarDetectAlg(VIDEO_FRAME_INFO_S *frame, PARKING_GUIDANCE_OUT_INF
     HI_U8 *pUserVirtAddr = (uint8_t*) HI_MPI_SYS_Mmap(phy_addr, dataSize);
     if (HI_NULL == pUserVirtAddr)
     {
-        SAMPLE_PRT("CallPlateCarDetectAlg HI_MPI_SYS_Mmap failed\n");
+        SYSLOG_PRT("CallPlateCarDetectAlg HI_MPI_SYS_Mmap failed\n");
         return -1;
     }
 
@@ -2046,7 +2089,7 @@ HI_S32 CallPlateCarDetectAlg(VIDEO_FRAME_INFO_S *frame, PARKING_GUIDANCE_OUT_INF
         uint64_t msecBefore = beforeAlg.tv_sec * 1000 + beforeAlg.tv_nsec / 1000 / 1000;
         uint64_t msecAfter = afterAlg.tv_sec * 1000 + afterAlg.tv_nsec / 1000 / 1000;
         uint64_t runMsec = msecAfter - msecBefore;
-        SAMPLE_PRT("Alg run time mseconds: %llu\n", runMsec);
+        SYSLOG_PRT("Alg run time mseconds: %llu\n", runMsec);
     }
     
     HI_MPI_SYS_Munmap(pUserVirtAddr, dataSize);
@@ -2105,7 +2148,7 @@ int ProcessGetPicReq(struct ServerProtoHeader *req, HI_U8 *jpgData, HI_U32 jpgLe
     cJSON_AddStringToObject(rootObj, "pic", base64);
     jsonData = cJSON_Print(rootObj);
     EXEC_NE(jsonData, NULL, ERROR);
-    //SAMPLE_PRT("jsonData:\n%s\n", jsonData);
+    //SYSLOG_PRT("jsonData:\n%s\n", jsonData);
     
     ret = OK;
 RET:
@@ -2117,7 +2160,7 @@ RET:
     WriteDataFromSocket(picReq->fd, &response, sizeof(response), &err);
     if (jsonData != NULL) {
         int off = WriteDataFromSocket(picReq->fd, jsonData, strlen(jsonData), &err);
-        SAMPLE_PRT("jsonData Len: %d, off: %d\n", strlen(jsonData), off);
+        SYSLOG_PRT("jsonData Len: %d, off: %d\n", strlen(jsonData), off);
     }
     
     close(picReq->fd);
@@ -2151,7 +2194,7 @@ int ProcessSetAlgParamReq(struct ServerProtoHeader *req)
     PARKING_GUIDANCE_CONFIG tmpParam = {0};
     int placeNum = 0;
     if ((ret = GetIntValFromJson(rootObj, "nPlaceNum", &placeNum)) != 0) {
-        SAMPLE_PRT("Can't get nPlaceNum from post data!\n");
+        SYSLOG_PRT("Can't get nPlaceNum from post data!\n");
         ret = ERROR;
         goto RET;
     }
@@ -2159,7 +2202,7 @@ int ProcessSetAlgParamReq(struct ServerProtoHeader *req)
 
     if ((ret = GetStringValFromJson(rootObj, "pDefaultProvince", 
         tmpParam.pDefaultProvince, sizeof(tmpParam.pDefaultProvince))) != 0) {
-        SAMPLE_PRT("Can't get pDefaultProvince from post data!\n");
+        SYSLOG_PRT("Can't get pDefaultProvince from post data!\n");
         ret = ERROR;
         goto RET;
     }
@@ -2179,10 +2222,10 @@ int ProcessSetAlgParamReq(struct ServerProtoHeader *req)
 
     DumpConfigToJson(&g_Allconfig);
 
-    SAMPLE_PRT("nPlaceNum: %d\n", g_Allconfig.algParam.nPlaceNum);
-    SAMPLE_PRT("pDefaultProvince: %s\n", g_Allconfig.algParam.pDefaultProvince);
+    SYSLOG_PRT("nPlaceNum: %d\n", g_Allconfig.algParam.nPlaceNum);
+    SYSLOG_PRT("pDefaultProvince: %s\n", g_Allconfig.algParam.pDefaultProvince);
     for (int i = 0; i < g_Allconfig.algParam.nPlaceNum; i++) {
-        SAMPLE_PRT("Place area %d: carnum: %s, x0: %d, y0: %d, x1: %d, y1: %d, x2: %d, y2: %d, x3: %d, y3: %d\n", 
+        SYSLOG_PRT("Place area %d: carnum: %s, x0: %d, y0: %d, x1: %d, y1: %d, x2: %d, y2: %d, x3: %d, y3: %d\n", 
             i, g_Allconfig.placeCfgList[i].id,
             g_Allconfig.algParam.stPlaceCoord[i + 0].x, g_Allconfig.algParam.stPlaceCoord[i + 0].y,
             g_Allconfig.algParam.stPlaceCoord[i + 1].x, g_Allconfig.algParam.stPlaceCoord[i + 1].y,
@@ -2193,7 +2236,7 @@ int ProcessSetAlgParamReq(struct ServerProtoHeader *req)
     char *provinceGb2312 = ProvinceUtf8ToGb2312(g_Allconfig.algParam.pDefaultProvince);
     if (provinceGb2312 != NULL) {
         strcpy(g_Allconfig.algParam.pDefaultProvince, provinceGb2312);
-        SAMPLE_PRT("pDefaultProvince gb2312: %s\n", g_Allconfig.algParam.pDefaultProvince);
+        SYSLOG_PRT("pDefaultProvince gb2312: %s\n", g_Allconfig.algParam.pDefaultProvince);
     }
     ret = OK;
 RET:
@@ -2230,7 +2273,7 @@ int ProcessSetHeartBeatParamReq(struct ServerProtoHeader *req)
 
     if ((heartBeatInterval == g_Allconfig.heartBeatInterval) &&
         (strncmp(postHeartBeatUrlBuf, g_Allconfig.postHeartBeatUrl, MAX_URL_LEN) == 0)) {
-        SAMPLE_PRT("HeartBeat param is equal!\n");
+        SYSLOG_PRT("HeartBeat param is equal!\n");
         ret = OK;
         goto RET;
     }
@@ -2240,7 +2283,7 @@ int ProcessSetHeartBeatParamReq(struct ServerProtoHeader *req)
     g_Allconfig.postHeartBeatUrl[MAX_URL_LEN - 1] = '\0';
     ret = OK;
 
-    SAMPLE_PRT("heartBeatInterval: %d, postHeartBeatUrl: %s\n", 
+    SYSLOG_PRT("heartBeatInterval: %d, postHeartBeatUrl: %s\n", 
         g_Allconfig.heartBeatInterval, g_Allconfig.postHeartBeatUrl);
     DumpConfigToJson(&g_Allconfig);
 RET:
@@ -2293,7 +2336,7 @@ int ProcessSetRegularlyParamReq(struct ServerProtoHeader *req)
     g_Allconfig.postHeartBeatUrl[MAX_URL_LEN - 1] = '\0';
     ret = OK;
 
-    SAMPLE_PRT("postJpegInterval: %d, postJpegUrl: %s, hearbeat: %d, %s\n", 
+    SYSLOG_PRT("postJpegInterval: %d, postJpegUrl: %s, hearbeat: %d, %s\n", 
         g_Allconfig.postJpegInterval, g_Allconfig.postJpegUrl,
         heartBeatInterval, g_Allconfig.postHeartBeatUrl);
     DumpConfigToJson(&g_Allconfig);
@@ -2340,7 +2383,7 @@ RET:
         cJSON_Delete(rootObj);
     }
 
-    SAMPLE_PRT("ret: %d, rsp: %s\n", ret, rspdata);
+    SYSLOG_PRT("ret: %d, rsp: %s\n", ret, rspdata);
     rsp.result = htonl(ret);
     rsp.len = htonl(0);
     if (rspdata != NULL) {
@@ -2410,7 +2453,7 @@ void *ProcessUpgThread(void *param)
     ret = GetRemoteFile(url, write_data, fp);
     JUGE(ret == 0, UPG_FAILED);
 
-    SAMPLE_PRT("upgrade success, url: %s, filesize: %d\n", url, g_upgState.fileSize);
+    SYSLOG_PRT("upgrade success, url: %s, filesize: %d\n", url, g_upgState.fileSize);
     ret = UPG_PROCESS;
 RET:
     if (fp != NULL) {
@@ -2660,7 +2703,7 @@ RET:
         cJSON_Delete(rootObj);
     }
 
-    SAMPLE_PRT("ret: %d, rsp: %s\n", ret, rspdata);
+    SYSLOG_PRT("ret: %d, rsp: %s\n", ret, rspdata);
     rsp.result = htonl(ret);
     rsp.len = htonl(0);
     if (rspdata != NULL) {
@@ -2738,7 +2781,7 @@ RET:
         cJSON_Delete(rootObj);
     }
 
-    SAMPLE_PRT("ret: %d, rsp: %s\n", ret, rspdata);
+    SYSLOG_PRT("ret: %d, rsp: %s\n", ret, rspdata);
     rsp.result = htonl(ret);
     rsp.len = htonl(0);
     if (rspdata != NULL) {
@@ -2819,7 +2862,7 @@ RET:
         cJSON_Delete(rootObj);
     }
 
-    SAMPLE_PRT("ret: %d, rsp: %s\n", ret, rspdata);
+    SYSLOG_PRT("ret: %d, rsp: %s\n", ret, rspdata);
     rsp.result = htonl(ret);
     rsp.len = htonl(0);
     if (rspdata != NULL) {
@@ -2895,7 +2938,7 @@ RET:
         cJSON_Delete(rootObj);
     }
 
-    SAMPLE_PRT("ret: %d, rsp: %s\n", ret, rspdata);
+    SYSLOG_PRT("ret: %d, rsp: %s\n", ret, rspdata);
     rsp.result = htonl(ret);
     rsp.len = htonl(0);
     if (rspdata != NULL) {
@@ -3247,7 +3290,7 @@ void ProcessAlgResult(PARKING_GUIDANCE_OUT_INFO *outInfo, VIDEO_FRAME_INFO_S *fr
                 strcpy(outInfo->stParkInfo[i].pcPlateInfo, plateUtf8);
             }
         }
-        SAMPLE_PRT("idx: %d, bIsAvailible: %d, bIsPlate: %d, bIsVehicle: %d, pcPlateInfo: %s, x0: %d, y0: %d, x1: %d, y1: %d, type: %d, rel: %d\n", 
+        SYSLOG_PRT("idx: %d, bIsAvailible: %d, bIsPlate: %d, bIsVehicle: %d, pcPlateInfo: %s, x0: %d, y0: %d, x1: %d, y1: %d, type: %d, rel: %d\n", 
             i, outInfo->stParkInfo[i].bIsAvailible, outInfo->stParkInfo[i].bIsPlate, 
             outInfo->stParkInfo[i].bIsVehicle, outInfo->stParkInfo[i].pcPlateInfo, outInfo->stParkInfo[i].rtPlate.x0,
             outInfo->stParkInfo[i].rtPlate.y0, outInfo->stParkInfo[i].rtPlate.x1, outInfo->stParkInfo[i].rtPlate.y1,
@@ -3257,12 +3300,12 @@ void ProcessAlgResult(PARKING_GUIDANCE_OUT_INFO *outInfo, VIDEO_FRAME_INFO_S *fr
         if (g_Allconfig.placeCfgList[i].plateCfgState == PLATE_CONFIG_EMPTY) {
             outInfo->stParkInfo[i].bIsVehicle = HI_FALSE;
             outInfo->stParkInfo[i].bIsPlate = HI_FALSE;
-            SAMPLE_PRT("Set plate status empty!\n");
+            SYSLOG_PRT("Set plate status empty!\n");
         }
 
         if (g_Allconfig.placeCfgList[i].plateCfgState == PLATE_CONFIG_FULL) {
             outInfo->stParkInfo[i].bIsVehicle = HI_TRUE;
-            SAMPLE_PRT("Set plate status full!\n");
+            SYSLOG_PRT("Set plate status full!\n");
         }
         
         int isVehicel = HI_FALSE;
@@ -3316,14 +3359,14 @@ void ProcessAlgResult(PARKING_GUIDANCE_OUT_INFO *outInfo, VIDEO_FRAME_INFO_S *fr
                 outInfo->stParkInfo[i].rtPlate.y0, width, height, i);
     
             EncodeYuvDataToJpegData(vencChn, &plateFrame, &smallJpgData, &smallJpgDataLen);
-            SAMPLE_PRT("Small jpg data: %p, data len: %u\n", smallJpgData, smallJpgDataLen);
+            SYSLOG_PRT("Small jpg data: %p, data len: %u\n", smallJpgData, smallJpgDataLen);
         }
         if (postJpgData && (jpgData != NULL)) {
             char *postData = GeneratePostJpegData(&(outInfo->stParkInfo[i]), i, 
                 jpgData, jpgLen, smallJpgData, smallJpgDataLen);
             PostInfoItem *postItm = (PostInfoItem *)malloc(sizeof(PostInfoItem));
             if (postData != NULL && postItm != NULL) {
-                SAMPLE_PRT("XXXX Start to upload picture to Server!\n");
+                SYSLOG_PRT("XXXX Start to upload picture to Server!\n");
                 postItm->postUrl = postUrl;
                 postItm->postData = postData;
                 //post_json_to_server(postUrl, postData, NULL, 0);
@@ -3333,7 +3376,7 @@ void ProcessAlgResult(PARKING_GUIDANCE_OUT_INFO *outInfo, VIDEO_FRAME_INFO_S *fr
                     postData = NULL;
                     prevUploadJpgTime = now;
                 } else {
-                    SAMPLE_PRT("YYYY Push jpeg data to fifo failed!\n");
+                    SYSLOG_PRT("YYYY Push jpeg data to fifo failed!\n");
                 }
                 CHECK_AND_FREE(postItm);
                 CHECK_AND_FREE(postData);
@@ -3347,7 +3390,7 @@ void ProcessAlgResult(PARKING_GUIDANCE_OUT_INFO *outInfo, VIDEO_FRAME_INFO_S *fr
     if ((g_prevParkingPlaceState != currParkingPlaceState)  || updateLightTimeOut) {
         g_prevParkingPlaceState = currParkingPlaceState;
         if (fifo_ring_push(g_CtrLightFifo, (void *)currParkingPlaceState) != 0) {
-            SAMPLE_PRT("YYYY Push ctrl light work to fifo failed!\n");
+            SYSLOG_PRT("YYYY Push ctrl light work to fifo failed!\n");
         }
         prevUpdateLightStatus = now;
     }
@@ -3399,9 +3442,9 @@ HI_S32 SAMPLE_VENC_MJPEG_JPEG(void)
 
     // 初始化看门狗
     init_wdt();
-    SAMPLE_PRT("g_SoftWareVersion: %s\n", g_SoftWareVersion);
-    SAMPLE_PRT("g_HardWareVersion: %s\n", g_HardWareVersion);
-    SAMPLE_PRT("g_GitCommitId: %s\n", g_GitCommitId);
+    SYSLOG_PRT("g_SoftWareVersion: %s\n", g_SoftWareVersion);
+    SYSLOG_PRT("g_HardWareVersion: %s\n", g_HardWareVersion);
+    SYSLOG_PRT("g_GitCommitId: %s\n", g_GitCommitId);
     
     g_upgState.progress = 0;
     g_upgState.state = UPG_NOT_START;
@@ -3410,7 +3453,7 @@ HI_S32 SAMPLE_VENC_MJPEG_JPEG(void)
     memset(&g_Allconfig, 0, sizeof(g_Allconfig));
     int ret = ParseConfigJson(g_ConfigFile, &g_Allconfig);
     if (ret != 0) {
-        SAMPLE_PRT("SAMPLE_VENC_MJPEG_JPEG parse config json - %d!\n", ret);
+        SYSLOG_PRT("SAMPLE_VENC_MJPEG_JPEG parse config json - %d!\n", ret);
         g_Allconfig.algParam.nPlaceNum = MAX_PARKING_PLACE_NUM;
         strcpy(g_Allconfig.ControlIP, "127.0.0.1");
         DumpConfigToJson(&g_Allconfig);
@@ -3421,23 +3464,23 @@ HI_S32 SAMPLE_VENC_MJPEG_JPEG(void)
         DumpConfigToJson(&g_Allconfig);
     }
     
-    SAMPLE_PRT("postJpegUrl: %s\n", g_Allconfig.postJpegUrl);
-    SAMPLE_PRT("postJpegInterval: %d\n", g_Allconfig.postJpegInterval);
+    SYSLOG_PRT("postJpegUrl: %s\n", g_Allconfig.postJpegUrl);
+    SYSLOG_PRT("postJpegInterval: %d\n", g_Allconfig.postJpegInterval);
 
-    SAMPLE_PRT("postHeartBeatUrl: %s\n", g_Allconfig.postHeartBeatUrl);
-    SAMPLE_PRT("heartBeatInterval: %d\n", g_Allconfig.heartBeatInterval);
+    SYSLOG_PRT("postHeartBeatUrl: %s\n", g_Allconfig.postHeartBeatUrl);
+    SYSLOG_PRT("heartBeatInterval: %d\n", g_Allconfig.heartBeatInterval);
 
-    SAMPLE_PRT("ControledIP: %s\n", g_Allconfig.ControledIP);
-    SAMPLE_PRT("ControlIP: %s\n", g_Allconfig.ControlIP);
+    SYSLOG_PRT("ControledIP: %s\n", g_Allconfig.ControledIP);
+    SYSLOG_PRT("ControlIP: %s\n", g_Allconfig.ControlIP);
 
-    SAMPLE_PRT("LightSlaveIP: %s\n", g_Allconfig.LightSlaveIP);
-    SAMPLE_PRT("LightSlaveMac: %s\n", g_Allconfig.LightSlaveMac);
+    SYSLOG_PRT("LightSlaveIP: %s\n", g_Allconfig.LightSlaveIP);
+    SYSLOG_PRT("LightSlaveMac: %s\n", g_Allconfig.LightSlaveMac);
 
-    SAMPLE_PRT("position: %s\n", g_Allconfig.postion);
-    SAMPLE_PRT("nPlaceNum: %d\n", g_Allconfig.algParam.nPlaceNum);
-    SAMPLE_PRT("pDefaultProvince: %s\n", g_Allconfig.algParam.pDefaultProvince);
+    SYSLOG_PRT("position: %s\n", g_Allconfig.postion);
+    SYSLOG_PRT("nPlaceNum: %d\n", g_Allconfig.algParam.nPlaceNum);
+    SYSLOG_PRT("pDefaultProvince: %s\n", g_Allconfig.algParam.pDefaultProvince);
     for (int i = 0; i < g_Allconfig.algParam.nPlaceNum; i++) {
-        SAMPLE_PRT("Place area idx: %d, carnum: %s, enb: %d, cfgState: %d, x0: %d, y0: %d, x1: %d, y1: %d, x2: %d, y2: %d, x3: %d, y3: %d\n", i,
+        SYSLOG_PRT("Place area idx: %d, carnum: %s, enb: %d, cfgState: %d, x0: %d, y0: %d, x1: %d, y1: %d, x2: %d, y2: %d, x3: %d, y3: %d\n", i,
             g_Allconfig.placeCfgList[i].id,
             g_Allconfig.placeCfgList[i].enable,
             g_Allconfig.placeCfgList[i].plateCfgState,
@@ -3450,7 +3493,7 @@ HI_S32 SAMPLE_VENC_MJPEG_JPEG(void)
     char *provinceGb2312 = ProvinceUtf8ToGb2312(g_Allconfig.algParam.pDefaultProvince);
     if (provinceGb2312 != NULL) {
         strcpy(g_Allconfig.algParam.pDefaultProvince, provinceGb2312);
-        SAMPLE_PRT("pDefaultProvince gb2312: %s\n", g_Allconfig.algParam.pDefaultProvince);
+        SYSLOG_PRT("pDefaultProvince gb2312: %s\n", g_Allconfig.algParam.pDefaultProvince);
     }
     
     /******************************************
@@ -3461,7 +3504,7 @@ HI_S32 SAMPLE_VENC_MJPEG_JPEG(void)
         s32Ret = SAMPLE_COMM_SYS_GetPicSize(enSize[i], &stSize[i]);
         if (HI_SUCCESS != s32Ret)
         {
-            SAMPLE_PRT("SAMPLE_COMM_SYS_GetPicSize failed!\n");
+            SYSLOG_PRT("SAMPLE_COMM_SYS_GetPicSize failed!\n");
             return s32Ret;
         }
     }
@@ -3470,7 +3513,7 @@ HI_S32 SAMPLE_VENC_MJPEG_JPEG(void)
 
     if(SAMPLE_SNS_TYPE_BUTT == stViConfig.astViInfo[0].stSnsInfo.enSnsType)
     {
-        SAMPLE_PRT("Not set SENSOR%d_TYPE !\n",0);
+        SYSLOG_PRT("Not set SENSOR%d_TYPE !\n",0);
         return HI_FAILURE;
     }
 
@@ -3503,7 +3546,7 @@ HI_S32 SAMPLE_VENC_MJPEG_JPEG(void)
     s32Ret = SAMPLE_VENC_SYS_Init(&commVbAttr);
     if(s32Ret != HI_SUCCESS)
     {
-        SAMPLE_PRT("Init SYS err for %#x!\n", s32Ret);
+        SYSLOG_PRT("Init SYS err for %#x!\n", s32Ret);
         return s32Ret;
     }
     
@@ -3514,17 +3557,17 @@ HI_S32 SAMPLE_VENC_MJPEG_JPEG(void)
     VB_POOL u32PoolId = HI_MPI_VB_CreatePool(&stVbPoolCfg);
     if (VB_INVALID_POOLID == u32PoolId)
     {
-        SAMPLE_PRT("HI_MPI_VB_CreatePool failed!\n");
+        SYSLOG_PRT("HI_MPI_VB_CreatePool failed!\n");
         return HI_FAILURE;
     }
     VB_BLK plateBlk = HI_MPI_VB_GetBlock(u32PoolId, MAX_PLATE_WIDTH * MAX_PLATE_HEIGHT * 3 / 2, NULL);
     if (plateBlk == VB_INVALID_HANDLE) {
-        SAMPLE_PRT("HI_MPI_VB_GetBlock failed!\n");
+        SYSLOG_PRT("HI_MPI_VB_GetBlock failed!\n");
         return HI_FAILURE;
     }
     HI_U64 phyPlateAddr = HI_MPI_VB_Handle2PhysAddr(plateBlk);
     if (phyPlateAddr == 0) {
-        SAMPLE_PRT("HI_MPI_VB_Handle2PhysAddr failed!\n");
+        SYSLOG_PRT("HI_MPI_VB_Handle2PhysAddr failed!\n");
         return HI_FAILURE;
     }
     
@@ -3540,7 +3583,7 @@ HI_S32 SAMPLE_VENC_MJPEG_JPEG(void)
     s32Ret = SAMPLE_VENC_VI_Init(&stViConfig, stParam.ViVpssMode);
     if(s32Ret != HI_SUCCESS)
     {
-        SAMPLE_PRT("Init VI err for %#x!\n", s32Ret);
+        SYSLOG_PRT("Init VI err for %#x!\n", s32Ret);
         return HI_FAILURE;
     }
 
@@ -3550,14 +3593,14 @@ HI_S32 SAMPLE_VENC_MJPEG_JPEG(void)
     s32Ret = SAMPLE_VENC_VPSS_Init(VpssGrp, &stParam);
     if (HI_SUCCESS != s32Ret)
     {
-        SAMPLE_PRT("Init VPSS err for %#x!\n", s32Ret);
+        SYSLOG_PRT("Init VPSS err for %#x!\n", s32Ret);
         goto EXIT_VI_STOP;
     }
 
     s32Ret = SAMPLE_COMM_VI_Bind_VPSS(ViPipe, ViChn, VpssGrp);
     if(s32Ret != HI_SUCCESS)
     {
-        SAMPLE_PRT("VI Bind VPSS err for %#x!\n", s32Ret);
+        SYSLOG_PRT("VI Bind VPSS err for %#x!\n", s32Ret);
         goto EXIT_VPSS_STOP;
     }
     SAMPLE_VENC_SetDCFInfo(ViPipe);
@@ -3571,7 +3614,7 @@ HI_S32 SAMPLE_VENC_MJPEG_JPEG(void)
     s32Ret = SAMPLE_COMM_VENC_GetGopAttr(enGopMode,&stGopAttr);
     if (HI_SUCCESS != s32Ret)
     {
-        SAMPLE_PRT("Venc Get GopAttr for %#x!\n", s32Ret);
+        SYSLOG_PRT("Venc Get GopAttr for %#x!\n", s32Ret);
         goto EXIT_VI_VPSS_UNBIND;
     }
 
@@ -3580,14 +3623,14 @@ HI_S32 SAMPLE_VENC_MJPEG_JPEG(void)
     s32Ret = SAMPLE_COMM_VENC_Start(VencChn[0], enPayLoad[0],enSize[0], enRcMode,u32Profile[0],HI_FALSE,&stGopAttr);
     if (HI_SUCCESS != s32Ret)
     {
-        SAMPLE_PRT("Venc Start failed for %#x!\n", s32Ret);
+        SYSLOG_PRT("Venc Start failed for %#x!\n", s32Ret);
         goto EXIT_VI_VPSS_UNBIND;
     }
 
     s32Ret = SAMPLE_COMM_VPSS_Bind_VENC(VpssGrp, VpssChn[1],VencChn[0]);
     if (HI_SUCCESS != s32Ret)
     {
-        SAMPLE_PRT("Venc Get GopAttr failed for %#x!\n", s32Ret);
+        SYSLOG_PRT("Venc Get GopAttr failed for %#x!\n", s32Ret);
         goto EXIT_VENC_MJPEGE_STOP;
     }
 
@@ -3595,14 +3638,14 @@ HI_S32 SAMPLE_VENC_MJPEG_JPEG(void)
     s32Ret = SAMPLE_COMM_VENC_SnapStart(VencChn[1], &stSize[1], bSupportDcf);
     if (HI_SUCCESS != s32Ret)
     {
-        SAMPLE_PRT("Venc Start failed for %#x!\n", s32Ret);
+        SYSLOG_PRT("Venc Start failed for %#x!\n", s32Ret);
         goto EXIT_VENC_MJPEGE_UnBind;
     }
 
     //s32Ret = SAMPLE_COMM_VPSS_Bind_VENC(VpssGrp, VpssChn[0],VencChn[1]);
     //if (HI_SUCCESS != s32Ret)
     //{
-    //    SAMPLE_PRT("Venc bind Vpss failed for %#x!\n", s32Ret);
+    //    SYSLOG_PRT("Venc bind Vpss failed for %#x!\n", s32Ret);
     //    goto EXIT_VENC_JPEGE_STOP;
     //}
     
@@ -3622,7 +3665,7 @@ HI_S32 SAMPLE_VENC_MJPEG_JPEG(void)
     s32Ret = SAMPLE_COMM_VENC_StartGetStream(VencChn,1);
     if (HI_SUCCESS != s32Ret)
     {
-        SAMPLE_PRT("Start Venc failed!\n");
+        SYSLOG_PRT("Start Venc failed!\n");
         goto EXIT_VENC_JPEGE_UnBind;
     }
 
@@ -3637,10 +3680,10 @@ HI_S32 SAMPLE_VENC_MJPEG_JPEG(void)
     
     VPSS_CHN_ATTR_S attr;
     s32Ret = HI_MPI_VPSS_GetChnAttr(VpssGrp, VpssChn[0], &attr);
-    SAMPLE_PRT("HI_MPI_VPSS_GetChnAttr, ret: 0x%08x\n", s32Ret);
+    SYSLOG_PRT("HI_MPI_VPSS_GetChnAttr, ret: 0x%08x\n", s32Ret);
     attr.u32Depth = 3;
     s32Ret = HI_MPI_VPSS_SetChnAttr(VpssGrp, VpssChn[0], &attr);
-    SAMPLE_PRT("HI_MPI_VPSS_SetChnAttr, ret: 0x%08x\n", s32Ret);
+    SYSLOG_PRT("HI_MPI_VPSS_SetChnAttr, ret: 0x%08x\n", s32Ret);
 
     //配置默认颜色
     SetLightSateByGpio(g_colorState.currentColor);
@@ -3649,7 +3692,7 @@ HI_S32 SAMPLE_VENC_MJPEG_JPEG(void)
     if (g_ReplaceYuvData) {
         fp = fopen(g_ReplaceYuvFile, "r");
         if (fp == NULL) {
-            SAMPLE_PRT("Open replace.yuv failed - %s\n", g_ReplaceYuvFile);
+            SYSLOG_PRT("Open replace.yuv failed - %s\n", g_ReplaceYuvFile);
             return -1;
         }
     }
@@ -3657,7 +3700,7 @@ HI_S32 SAMPLE_VENC_MJPEG_JPEG(void)
     while (!g_exitMainThread)
     {
         if (g_rebootSystem) {
-            SAMPLE_PRT("Will reboot the system after 2s!\n");
+            SYSLOG_PRT("Will reboot the system after 2s!\n");
             sleep(2);
             execl("/bin/sh", "sh", "-c", "/sbin/reboot", (char *) 0);
         }
@@ -3671,7 +3714,7 @@ HI_S32 SAMPLE_VENC_MJPEG_JPEG(void)
         PARKING_GUIDANCE_OUT_INFO outInfo;
         s32Ret = HI_MPI_VPSS_GetChnFrame(VpssGrp,VpssChn[0],&stFrame,-1);
         if (s32Ret != HI_SUCCESS) {
-            SAMPLE_PRT("HI_MPI_VPSS_GetChnFrame failed: 0x%08x\n", s32Ret);
+            SYSLOG_PRT("HI_MPI_VPSS_GetChnFrame failed: 0x%08x\n", s32Ret);
             continue;
         }
 
@@ -3691,7 +3734,7 @@ HI_S32 SAMPLE_VENC_MJPEG_JPEG(void)
             memset(&outInfo, 0, sizeof(outInfo));
             HI_S32 callAlgRet = 0;
             if ((callAlgRet = CallPlateCarDetectAlg(&stFrame, &outInfo)) == -1) {
-                SAMPLE_PRT("CallPlateCarDetectAlg failed!\n");
+                SYSLOG_PRT("CallPlateCarDetectAlg failed!\n");
             }
             
             if ((jpgData != NULL) && (jpgLen != 0) && (callAlgRet == 0)) {            
