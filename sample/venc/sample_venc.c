@@ -211,6 +211,17 @@ typedef struct PostInfoItem {
     char *postData;
 } PostInfoItem;
 
+void init_wdt()
+{
+    char buffer[256] = {0};
+    const uint32_t margin = 180;
+    snprintf(buffer, sizeof(buffer), "insmod /ko/gk7205v200_wdt.ko default_margin=%u nodeamon=1", margin);
+    int ret = system(buffer);
+    if (ret != 0) {
+        SAMPLE_PRT("%s - %u\n", strerror(errno), ret);
+    }
+}
+
 void feed_wdt()
 {
     int fd = open(WDT_DEV_FILE, O_RDWR);
@@ -3386,6 +3397,9 @@ HI_S32 SAMPLE_VENC_MJPEG_JPEG(void)
     VB_POOL_CONFIG_S stVbPoolCfg;
     //ParkingGuidanceParamStru config = {0};
 
+    // 初始化看门狗
+    init_wdt();
+    
     g_upgState.progress = 0;
     g_upgState.state = UPG_NOT_START;
     pthread_mutex_init(&(g_upgState.mutex), NULL);
