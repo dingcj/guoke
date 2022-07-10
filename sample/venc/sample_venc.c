@@ -3399,6 +3399,9 @@ HI_S32 SAMPLE_VENC_MJPEG_JPEG(void)
 
     // 初始化看门狗
     init_wdt();
+    SAMPLE_PRT("g_SoftWareVersion: %s\n", g_SoftWareVersion);
+    SAMPLE_PRT("g_HardWareVersion: %s\n", g_HardWareVersion);
+    SAMPLE_PRT("g_GitCommitId: %s\n", g_GitCommitId);
     
     g_upgState.progress = 0;
     g_upgState.state = UPG_NOT_START;
