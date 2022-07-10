@@ -2467,6 +2467,9 @@ RET:
     g_upgState.state = ret;    
     if (g_upgState.progress == 100 && g_upgState.state == UPG_PROCESS) {
         g_upgState.state = UPG_SUCCESS;
+        exit(123);
+    } else {
+        exit(-1);
     }
     pthread_mutex_unlock(&(g_upgState.mutex));
     printf("thread: %d %d\n", g_upgState.state, g_upgState.progress);
