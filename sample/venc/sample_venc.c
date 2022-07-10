@@ -3459,6 +3459,12 @@ HI_S32 SAMPLE_VENC_MJPEG_JPEG(void)
         SYSLOG_PRT("SAMPLE_VENC_MJPEG_JPEG parse config json - %d!\n", ret);
         g_Allconfig.algParam.nPlaceNum = MAX_PARKING_PLACE_NUM;
         strcpy(g_Allconfig.ControlIP, "127.0.0.1");
+
+        strcpy(g_Allconfig.postion, "103");
+        for (uint32_t i = 0; i < MAX_PLACE_NUM; i++) {
+            snprintf(g_Allconfig.placeCfgList[i].id, sizeof(g_Allconfig.placeCfgList[i].id), "%d", 100 + i + 1);
+            g_Allconfig.placeCfgList[i].enable = 1;
+        }
         DumpConfigToJson(&g_Allconfig);
         //return ret;
     }
