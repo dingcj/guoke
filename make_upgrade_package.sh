@@ -8,6 +8,8 @@ fi
 rm -rf ./upgrade
 mkdir upgrade
 
+commit_id=`git rev-parse HEAD`
+sed -i "s/^const char \*g_GitCommitId =.*$/const char \*g_GitCommitId = \"$commit_id\";/g" HttpInterface/shareHeader.h
 sed -i "s/^const char \*g_SoftWareVersion =.*$/const char \*g_SoftWareVersion = \"$1\";/g" HttpInterface/shareHeader.h
 sed -i "s/^const char \*g_HardWareVersion =.*$/const char \*g_HardWareVersion = \"$2\";/g" HttpInterface/shareHeader.h
 
