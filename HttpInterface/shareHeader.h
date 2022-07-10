@@ -7,8 +7,9 @@ extern "C" {
 #endif
 #endif /* __cplusplus */
 
-const char *g_SoftWareVersion = "202203132108";
-const char *g_HardWareVersion = "202203132108";
+const char *g_SoftWareVersion = "33";
+const char *g_HardWareVersion = "33";
+const char *g_GitCommitId = "1feee2d2e3e981dfda7cfc59898ecf909589683d";
 
 char *g_ConfigFile = "/alg/config.json";
 char *g_NetworkCfg = "/alg/network.json";
