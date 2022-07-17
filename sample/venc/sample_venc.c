@@ -32,7 +32,8 @@ extern "C" {
 #include "shareHeader.h"
 #include "watchdog.h"
 
-const char *log_server = "10.10.10.10";
+const char *log_server = "192.168.21.3";
+const uint32_t log_port = 514;
 const uint32_t bufferSize = 1400;
 const uint32_t enb_log = 1;
 
@@ -45,7 +46,7 @@ void send_udp_str(char *ip, int port, char* str);
         logBuffer[bufferSize - 1] = '\0'; \
         puts(logBuffer); \
         if (enb_log) { \
-            send_udp_str("10.10.10.10", 514, logBuffer); \
+            send_udp_str(log_server, log_port, logBuffer); \
         } \
     }while(0)
 
@@ -259,7 +260,6 @@ void send_udp_str(char *ip, int port, char* str)
     
 	if (sendto(fd, str, strlen(str), 0, (struct sockaddr *) &server, server_len) < 0) {
         perror("sendto error");
-        return;
 	}
 	close(fd);
 }
