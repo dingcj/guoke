@@ -17,7 +17,7 @@ function check_ip() {
     fi
 }
 
-if [ $# != 6 ] ; then
+if [ $# != 7 ] ; then
     echo "Make image packe script param err!"
     exit 1
 fi
@@ -66,16 +66,36 @@ then
     exit -1
 fi
 
+chip_type=""
+if [[ ${7} = "v300" ]]
+then
+    chip_type="v300"
+fi
+
+if [[ ${7} = "v200" ]]
+then
+    chip_type="v200"
+fi
+
+if [[ ${chip_type} = "" ]]
+then
+    echo "Please input correct chip type, v300 or v200!"
+    exit -1
+fi
+echo $chip_type
+rootfs_dirname=rootfs_package_$chip_type
+echo $rootfs_dirname
+
 cd sample
 make clean
 echo $make_cmd
 $make_cmd
 cd ../
 
-rm -rf ./rootfs_package
-tar zxvf ./rootfs_package.tar.gz
+rm -rf ./${rootfs_dirname}
+tar zxvf ./${rootfs_dirname}.tar.gz
 
-packageAlgDir=./rootfs_package/alg
+packageAlgDir=./${rootfs_dirname}/alg
 ## set ip addr
 echo $3 > $packageAlgDir/ip_cfg.txt
 echo $4 > $packageAlgDir/netmask_cfg.txt
@@ -89,8 +109,8 @@ cp ./sample/venc/sample_venc $packageAlgDir
 cp ./search/search $packageAlgDir
 cp ./sample/venc/vehicle0415.bin $packageAlgDir
 cp ./sample/venc/vehicle0415.param $packageAlgDir
-cp ./sample/mime.types ./rootfs_package/etc
-cp ./sample/rcS ./rootfs_package/etc/init.d
+cp ./sample/mime.types ./${rootfs_dirname}/etc
+cp ./sample/rcS ./${rootfs_dirname}/etc/init.d
 
 arm-gcc6.3-linux-uclibceabi-strip $packageAlgDir/boa
 arm-gcc6.3-linux-uclibceabi-strip $packageAlgDir/sample_venc
@@ -100,14 +120,14 @@ arm-gcc6.3-linux-uclibceabi-strip $packageAlgDir/search
 current=`date "+%Y%m%d%H%M%S"`
 
 chmod +x ./mkfs.jffs2
-mkfs_cmd="./mkfs.jffs2 -d ./rootfs_package -l -e 0x10000 -o rootfs-$current.jffs2"
+mkfs_cmd="./mkfs.jffs2 -d ./${rootfs_dirname} -l -e 0x10000 -o rootfs-${chip_type}-$current.jffs2"
 
 if [[ ${6} = "eqm" ]]
 then
-    mkfs_cmd="./mkfs.jffs2 -d ./rootfs_package -l -e 0x10000 -o rootfs-eqm-$current.jffs2"
+    mkfs_cmd="./mkfs.jffs2 -d ./${rootfs_dirname} -l -e 0x10000 -o rootfs-eqm-${chip_type}-$current.jffs2"
 fi
 echo $mkfs_cmd
 $mkfs_cmd
 
-mv ./rootfs_package ./out/rootfs_package_$current
+mv ./${rootfs_dirname} ./out/${rootfs_dirname}_$current
 mv rootfs-*.jffs2 ./out
