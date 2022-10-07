@@ -110,7 +110,7 @@ cp ./search/search $packageAlgDir
 cp ./sample/venc/vehicle0415.bin $packageAlgDir
 cp ./sample/venc/vehicle0415.param $packageAlgDir
 cp ./sample/mime.types ./${rootfs_dirname}/etc
-cp ./sample/rcS ./${rootfs_dirname}/etc/init.d
+cp ./sample/rcS_$chip_type ./${rootfs_dirname}/etc/init.d/rcS
 
 arm-gcc6.3-linux-uclibceabi-strip $packageAlgDir/boa
 arm-gcc6.3-linux-uclibceabi-strip $packageAlgDir/sample_venc
