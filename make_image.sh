@@ -108,3 +108,6 @@ then
 fi
 echo $mkfs_cmd
 $mkfs_cmd
+
+mv ./rootfs_package ./out/rootfs_package_$current
+mv rootfs-*.jffs2 ./out
